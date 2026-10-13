@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+.vscode/
+artifacts/*
+!artifacts/.gitkeep
+.env
+*.user
+*.suo
+TestResults/
+coverage/
+*.trx
+*.log

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>TutorManagement.Api-LocalDevelopment</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\TutorManagement.WebApi\TutorManagement.WebApi.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\TutorManagement.Infrastructure\TutorManagement.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\IdentityAccess\TutorManagement.Modules.IdentityAccess.Api\TutorManagement.Modules.IdentityAccess.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Organizations\TutorManagement.Modules.Organizations.Api\TutorManagement.Modules.Organizations.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Academics\TutorManagement.Modules.Academics.Api\TutorManagement.Modules.Academics.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\IdentityAccess\TutorManagement.Modules.IdentityAccess.Infrastructure\TutorManagement.Modules.IdentityAccess.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Organizations\TutorManagement.Modules.Organizations.Infrastructure\TutorManagement.Modules.Organizations.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Academics\TutorManagement.Modules.Academics.Infrastructure\TutorManagement.Modules.Academics.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

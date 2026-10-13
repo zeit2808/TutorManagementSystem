@@ -1,0 +1,10 @@
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+**/bin/
+**/obj/
+**/TestResults/
+**/coverage/
+**/.env

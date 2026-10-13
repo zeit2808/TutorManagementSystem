@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\TutorManagement.Modules.IdentityAccess.Domain\TutorManagement.Modules.IdentityAccess.Domain.csproj" />
+    <ProjectReference Include="..\TutorManagement.Modules.IdentityAccess.Contracts\TutorManagement.Modules.IdentityAccess.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\TutorManagement.Application.Abstractions\TutorManagement.Application.Abstractions.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
