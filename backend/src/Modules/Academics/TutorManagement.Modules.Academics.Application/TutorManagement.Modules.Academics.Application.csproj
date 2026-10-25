@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TutorManagement.Modules.Academics.Domain\TutorManagement.Modules.Academics.Domain.csproj" />
     <ProjectReference Include="..\TutorManagement.Modules.Academics.Contracts\TutorManagement.Modules.Academics.Contracts.csproj" />
+    <ProjectReference Include="..\..\IdentityAccess\TutorManagement.Modules.IdentityAccess.Contracts\TutorManagement.Modules.IdentityAccess.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\TutorManagement.Application.Abstractions\TutorManagement.Application.Abstractions.csproj" />
   </ItemGroup>
 

@@ -12,3 +12,5 @@ TestResults/
 coverage/
 *.trx
 *.log
+.local/
+.artifacts/

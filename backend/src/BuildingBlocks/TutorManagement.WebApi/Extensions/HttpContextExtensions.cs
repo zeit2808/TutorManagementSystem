@@ -5,6 +5,9 @@ namespace TutorManagement.WebApi.Extensions;
 
 public static class HttpContextExtensions
 {
-    public static ApiResponse<T> ToApiResponse<T>(this HttpContext context, T data) =>
-        ApiResponse<T>.Ok(data, context.TraceIdentifier);
+    public static ApiResponse<T> ToApiResponse<T>(
+        this HttpContext context,
+        T data,
+        string message = "Request processed successfully") =>
+        ApiResponse<T>.Ok(data, context.TraceIdentifier, message);
 }

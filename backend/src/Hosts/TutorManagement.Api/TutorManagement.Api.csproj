@@ -10,7 +10,9 @@
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,6 +24,8 @@
     <ProjectReference Include="..\..\Modules\IdentityAccess\TutorManagement.Modules.IdentityAccess.Infrastructure\TutorManagement.Modules.IdentityAccess.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Organizations\TutorManagement.Modules.Organizations.Infrastructure\TutorManagement.Modules.Organizations.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Academics\TutorManagement.Modules.Academics.Infrastructure\TutorManagement.Modules.Academics.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Finance\TutorManagement.Modules.Finance.Api\TutorManagement.Modules.Finance.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Finance\TutorManagement.Modules.Finance.Infrastructure\TutorManagement.Modules.Finance.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
