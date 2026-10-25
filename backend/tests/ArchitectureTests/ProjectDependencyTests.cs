@@ -97,7 +97,7 @@ public sealed class ProjectDependencyTests
 
         while (current is not null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "TutorManagementSystem.slnx")))
+            if (File.Exists(Path.Combine(current.FullName, "TutorManagementSystem.sln")))
             {
                 return current.FullName;
             }

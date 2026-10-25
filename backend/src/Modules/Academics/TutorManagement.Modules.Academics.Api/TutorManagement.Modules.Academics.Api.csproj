@@ -3,11 +3,13 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Asp.Versioning.Mvc" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\TutorManagement.Modules.Academics.Application\TutorManagement.Modules.Academics.Application.csproj" />
     <ProjectReference Include="..\TutorManagement.Modules.Academics.Contracts\TutorManagement.Modules.Academics.Contracts.csproj" />
+    <ProjectReference Include="..\..\IdentityAccess\TutorManagement.Modules.IdentityAccess.Contracts\TutorManagement.Modules.IdentityAccess.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\TutorManagement.WebApi\TutorManagement.WebApi.csproj" />
   </ItemGroup>
 

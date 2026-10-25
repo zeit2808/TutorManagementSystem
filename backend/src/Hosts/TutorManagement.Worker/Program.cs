@@ -1,7 +1,6 @@
 using TutorManagement.Infrastructure;
-using TutorManagement.Modules.Academics.Infrastructure;
+using TutorManagement.Modules.Finance.Infrastructure;
 using TutorManagement.Modules.IdentityAccess.Infrastructure;
-using TutorManagement.Modules.Organizations.Infrastructure;
 using TutorManagement.Worker;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -12,9 +11,8 @@ var connectionString = builder.Configuration.GetConnectionString("MainDatabase")
     ?? throw new InvalidOperationException("Connection string 'MainDatabase' is not configured.");
 
 builder.Services.AddSharedInfrastructure();
-builder.Services.AddIdentityAccessInfrastructure(connectionString);
-builder.Services.AddOrganizationsInfrastructure(connectionString);
-builder.Services.AddAcademicsInfrastructure(connectionString);
+builder.Services.AddIdentityAccessEmailWorker(connectionString, builder.Configuration);
+builder.Services.AddFinanceReminders(connectionString);
 builder.Services.AddHostedService<Worker>();
 
 var host = builder.Build();

@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Asp.Versioning.Mvc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TutorManagement.Modules.Finance.Application\TutorManagement.Modules.Finance.Application.csproj" />
+    <ProjectReference Include="..\TutorManagement.Modules.Finance.Contracts\TutorManagement.Modules.Finance.Contracts.csproj" />
+    <ProjectReference Include="..\..\IdentityAccess\TutorManagement.Modules.IdentityAccess.Contracts\TutorManagement.Modules.IdentityAccess.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\TutorManagement.WebApi\TutorManagement.WebApi.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TutorManagement.Modules.Organizations.Domain\TutorManagement.Modules.Organizations.Domain.csproj" />
     <ProjectReference Include="..\TutorManagement.Modules.Organizations.Application\TutorManagement.Modules.Organizations.Application.csproj" />
+    <ProjectReference Include="..\TutorManagement.Modules.Organizations.Contracts\TutorManagement.Modules.Organizations.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\TutorManagement.Infrastructure\TutorManagement.Infrastructure.csproj" />
   </ItemGroup>
 

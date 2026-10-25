@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Hosts\TutorManagement.Api\TutorManagement.Api.csproj" />
+    <ProjectReference Include="..\..\src\Modules\IdentityAccess\TutorManagement.Modules.IdentityAccess.Infrastructure\TutorManagement.Modules.IdentityAccess.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

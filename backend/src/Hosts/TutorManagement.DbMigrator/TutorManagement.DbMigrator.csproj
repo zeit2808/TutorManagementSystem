@@ -6,6 +6,10 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="System.Security.Cryptography.Xml" />
   </ItemGroup>
@@ -15,6 +19,7 @@
     <ProjectReference Include="..\..\Modules\IdentityAccess\TutorManagement.Modules.IdentityAccess.Infrastructure\TutorManagement.Modules.IdentityAccess.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Organizations\TutorManagement.Modules.Organizations.Infrastructure\TutorManagement.Modules.Organizations.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Academics\TutorManagement.Modules.Academics.Infrastructure\TutorManagement.Modules.Academics.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Finance\TutorManagement.Modules.Finance.Infrastructure\TutorManagement.Modules.Finance.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

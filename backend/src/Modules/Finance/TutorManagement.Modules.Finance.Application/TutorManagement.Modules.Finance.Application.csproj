@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\TutorManagement.Modules.Finance.Domain\TutorManagement.Modules.Finance.Domain.csproj" />
+    <ProjectReference Include="..\TutorManagement.Modules.Finance.Contracts\TutorManagement.Modules.Finance.Contracts.csproj" />
+    <ProjectReference Include="..\..\IdentityAccess\TutorManagement.Modules.IdentityAccess.Contracts\TutorManagement.Modules.IdentityAccess.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\TutorManagement.Application.Abstractions\TutorManagement.Application.Abstractions.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

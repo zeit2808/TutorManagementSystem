@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $backendRoot = Split-Path -Parent $PSScriptRoot
-$solutionPath = Join-Path $backendRoot 'TutorManagementSystem.slnx'
+$solutionPath = Join-Path $backendRoot 'TutorManagementSystem.sln'
 
 Set-Location -LiteralPath $backendRoot
 
@@ -60,7 +60,7 @@ function Add-ProjectReference {
 }
 
 if (-not (Test-Path -LiteralPath $solutionPath)) {
-    & dotnet new sln --name TutorManagementSystem
+    & dotnet new sln --name TutorManagementSystem --format sln
 }
 
 New-DotNetProject -Template webapi -Name TutorManagement.Api `
@@ -112,7 +112,49 @@ $projectPaths = @(
     Select-Object -ExpandProperty FullName
 )
 
-& dotnet sln $solutionPath add $projectPaths
+$solutionGroups = [ordered]@{
+    'Hosts' = @(
+        $projectPaths | Where-Object {
+            $_ -like (Join-Path $backendRoot 'src\Hosts\*')
+        }
+    )
+    'BuildingBlocks' = @(
+        $projectPaths | Where-Object {
+            $_ -like (Join-Path $backendRoot 'src\BuildingBlocks\*')
+        }
+    )
+}
+
+foreach ($module in $modules) {
+    $solutionGroups["Modules\$module"] = @(
+        $projectPaths | Where-Object {
+            $_ -like (Join-Path $backendRoot "src\Modules\$module\*")
+        }
+    )
+}
+
+$solutionGroups['Tests'] = @(
+    $projectPaths | Where-Object {
+        $_ -like (Join-Path $backendRoot 'tests\*')
+    }
+)
+
+foreach ($solutionGroup in $solutionGroups.GetEnumerator()) {
+    $groupProjects = @($solutionGroup.Value)
+
+    if ($groupProjects.Count -eq 0) {
+        Write-Warning "No project found for solution folder '$($solutionGroup.Key)'."
+        continue
+    }
+
+    & dotnet sln $solutionPath add $groupProjects `
+        --solution-folder $solutionGroup.Key `
+        --include-references false
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not add projects to solution folder '$($solutionGroup.Key)'."
+    }
+}
 
 $sharedKernel = 'src/BuildingBlocks/TutorManagement.SharedKernel/TutorManagement.SharedKernel.csproj'
 $applicationAbstractions = 'src/BuildingBlocks/TutorManagement.Application.Abstractions/TutorManagement.Application.Abstractions.csproj'

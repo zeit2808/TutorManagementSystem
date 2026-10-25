@@ -1,5 +1,46 @@
 # Backend setup guide - Tutor Management System
 
+Hướng dẫn setup local theo từng thao tác trong Visual Studio:
+[docs/VISUAL-STUDIO-LOCAL-SETUP.md](docs/VISUAL-STUDIO-LOCAL-SETUP.md).
+
+Đổi mật khẩu, quên mật khẩu/OTP và kiểm thử thu hồi phiên trong Visual Studio:
+[docs/PASSWORD-RECOVERY-AND-SESSION-TESTING.md](docs/PASSWORD-RECOVERY-AND-SESSION-TESTING.md).
+
+Báo cáo bước 3 (invite-only, Login và Worker email):
+[docs/STEP-3-INVITE-ONLY-LOGIN-REPORT.md](docs/STEP-3-INVITE-ONLY-LOGIN-REPORT.md).
+
+Thiết lập SMTP thật và test email → verify → login bằng Visual Studio:
+[docs/SMTP-EMAIL-SETUP-AND-END-TO-END-TEST.md](docs/SMTP-EMAIL-SETUP-AND-END-TO-END-TEST.md).
+
+Luồng duyệt trung tâm → gửi invitation → accept → login:
+[docs/CENTER-APPROVAL-INVITATION-FLOW.md](docs/CENTER-APPROVAL-INVITATION-FLOW.md).
+
+Chọn trung tâm và phân quyền membership theo từng request:
+[docs/CENTER-CONTEXT-AND-AUTHORIZATION.md](docs/CENTER-CONTEXT-AND-AUTHORIZATION.md).
+
+Tài liệu tham chiếu lệnh và kiểm thử chi tiết toàn bộ endpoint hiện tại:
+[docs/API-SETUP-AND-TESTING.md](docs/API-SETUP-AND-TESTING.md).
+
+Contract JSON đã thu gọn, các trường thay đổi và cách test bằng Swagger/Visual Studio:
+[docs/API-RESPONSE-CONTRACT.md](docs/API-RESPONSE-CONTRACT.md).
+
+Lịch dạy lặp theo tuần, migration và hướng dẫn test từng bước bằng Swagger:
+[docs/RECURRING-TEACHING-SCHEDULE-TEST.md](docs/RECURRING-TEACHING-SCHEDULE-TEST.md).
+
+Điểm danh từng buổi: bản nháp, chốt, sửa có lý do và hướng dẫn test trong IDE:
+[docs/ATTENDANCE-FLOW-TEST.md](docs/ATTENDANCE-FLOW-TEST.md).
+
+Lịch cá nhân nhiều trung tâm, kiểm trùng lịch, thông báo đổi lịch và yêu cầu của học sinh:
+[docs/SCHEDULE-RULES-TEST.md](docs/SCHEDULE-RULES-TEST.md).
+
+Để chạy ba bài kiểm thử auth với PostgreSQL local trong Visual Studio: vào
+**Test > Configure Run Settings > Select Solution Wide runsettings File**, chọn
+`tests/IntegrationTests/AuthE2E.runsettings`, rồi chạy `RealPostgresAuthFlowTests`
+trong Test Explorer. Cần cấu hình `ConnectionStrings:MainDatabase` trong User
+Secrets của `TutorManagement.Api` và áp migration mới nhất trước khi chạy. Các
+bài này chỉ dùng database local `tutor_management` và tự dọn tài khoản thử;
+bỏ chọn runsettings khi không muốn test chạm DB. Không chạy trên production.
+
 **Kiến trúc:** Modular Monolith + Clean Architecture theo module + Vertical Slice  
 **Runtime:** .NET 10 / ASP.NET Core  
 **Database:** PostgreSQL + EF Core migrations  
@@ -11,9 +52,9 @@
 Set-Location -LiteralPath 'D:\Project\QuanLyDayThem\backend'
 
 dotnet tool restore
-dotnet restore .\TutorManagementSystem.slnx
-dotnet build .\TutorManagementSystem.slnx --no-restore --configuration Release -m:1
-dotnet test .\TutorManagementSystem.slnx --no-build --configuration Release -m:1
+dotnet restore .\TutorManagementSystem.sln
+dotnet build .\TutorManagementSystem.sln --no-restore --configuration Release -m:1
+dotnet test .\TutorManagementSystem.sln --no-build --configuration Release -m:1
 ```
 
 Máy hiện có PostgreSQL 18 tại `C:\Program Files\PostgreSQL\18`, lắng nghe ở
@@ -33,6 +74,14 @@ Script sẽ hỏi hai mật khẩu bằng prompt ẩn: mật khẩu admin `postg
 cài PostgreSQL và mật khẩu mới dành cho `tutor_app`. Mật khẩu không được ghi vào
 repository hay `appsettings.json`.
 
+Sau đó cấu hình JWT và tài khoản Owner phát triển. Script tạo signing key ngẫu
+nhiên, hỏi mật khẩu Owner bằng prompt ẩn, lưu tất cả bằng .NET User Secrets rồi
+chạy DbMigrator. Có thể chạy lại an toàn; tài khoản đã tồn tại sẽ không bị ghi đè.
+
+```powershell
+.\tools\setup-identity-secrets.ps1 -OwnerUsername 'admin'
+```
+
 Sau khi setup thành công, chạy API:
 
 ```powershell
@@ -50,11 +99,85 @@ Các endpoint kiểm tra:
 ```text
 GET http://localhost:8080/health/live
 GET http://localhost:8080/health/ready
-GET http://localhost:8080/api/v1/modules/identity-access
-GET http://localhost:8080/api/v1/modules/organizations
-GET http://localhost:8080/api/v1/modules/academics
 GET http://localhost:8080/openapi/v1.json
+GET http://localhost:8080/swagger
+POST http://localhost:8080/api/v1/auth/login
+POST http://localhost:8080/api/v1/auth/verify-email
+POST http://localhost:8080/api/v1/auth/resend-verification-email
+POST http://localhost:8080/api/v1/auth/refresh-token
+POST http://localhost:8080/api/v1/auth/logout
+POST http://localhost:8080/api/v1/auth/logout-all
+GET http://localhost:8080/api/v1/platform/centers
+POST http://localhost:8080/api/v1/platform/centers
+POST http://localhost:8080/api/v1/platform/centers/{centerId}/approve
+POST http://localhost:8080/api/v1/platform/centers/{centerId}/invitations
+POST http://localhost:8080/api/v1/auth/invitations/accept
+GET http://localhost:8080/api/v1/centers/{centerId}/profile
+GET http://localhost:8080/api/v1/centers/{centerId}/change-requests
+POST http://localhost:8080/api/v1/centers/{centerId}/change-requests
+GET http://localhost:8080/api/v1/platform/centers/{centerId}/change-requests
+POST http://localhost:8080/api/v1/platform/centers/{centerId}/change-requests/{requestId}/approve
+POST http://localhost:8080/api/v1/platform/centers/{centerId}/change-requests/{requestId}/reject
 ```
+
+Chủ trung tâm không sửa trực tiếp hồ sơ: họ gửi yêu cầu thay đổi toàn bộ thông tin,
+PlatformAdmin đối chiếu và duyệt hoặc từ chối. Xem hướng dẫn thao tác trong IDE tại
+[CENTER-CHANGE-REQUEST-FLOW.md](docs/CENTER-CHANGE-REQUEST-FLOW.md).
+
+Đăng nhập và gọi endpoint có authorization trong PowerShell:
+
+```powershell
+$session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+
+$loginResponse = Invoke-WebRequest `
+  -Method Post `
+  -Uri 'http://localhost:8080/api/v1/auth/login' `
+  -ContentType 'application/json' `
+  -Body (@{ username = 'admin'; password = 'MAT_KHAU_DA_NHAP' } | ConvertTo-Json) `
+  -WebSession $session
+
+$login = $loginResponse.Content | ConvertFrom-Json
+$accessToken = $login.data.accessToken
+
+Invoke-RestMethod `
+  -Method Get `
+  -Uri 'http://localhost:8080/api/v1/platform/centers' `
+  -Headers @{ Authorization = "Bearer $accessToken" }
+
+$rotatedResponse = Invoke-WebRequest `
+  -Method Post `
+  -Uri 'http://localhost:8080/api/v1/auth/refresh-token' `
+  -WebSession $session
+
+Invoke-WebRequest `
+  -Method Post `
+  -Uri 'http://localhost:8080/api/v1/auth/logout' `
+  -WebSession $session
+```
+
+Refresh token chỉ được lưu trong cookie `HttpOnly`; response JSON không chứa
+refresh token. Refresh token cũ bị revoke ngay sau khi rotation. Nếu token cũ bị
+dùng lại, toàn bộ token family bị thu hồi. React phải gửi request với
+`credentials: 'include'` hoặc Axios `withCredentials: true`.
+
+### Invite-only onboarding và email Worker
+
+Public registration đã bị loại bỏ. Tài khoản trung tâm chỉ được tạo qua lời
+mời sau khi `PlatformAdmin` duyệt trung tâm. Invitation hết hạn sau 48 giờ;
+token gốc chỉ đi qua email còn database chỉ lưu SHA-256 hash.
+
+Gọi `POST /api/v1/auth/register` phải trả `404` và route không xuất hiện trong
+Swagger. Worker vẫn xử lý transactional outbox để sẵn sàng cho invitation,
+verify/resend và các email bảo mật tiếp theo. Môi trường local ghi email vào:
+
+```text
+src/Hosts/TutorManagement.Worker/.local/emails/
+```
+
+Worker đọc theo batch có cấu hình, giao email song song có giới hạn và xử lý tiếp
+ngay khi còn backlog. Mặc định dùng `File`; có thể đổi sang `Smtp` với STARTTLS
+hoặc SSL-on-connect hoàn toàn bằng Worker User Secrets. Cấu hình nằm trong
+`TutorManagement.Worker/appsettings.json`.
 
 > `.env.example` chỉ chứa credential phát triển cục bộ. Không dùng credential này
 > cho staging/production và không commit file `.env`.
@@ -63,7 +186,7 @@ GET http://localhost:8080/openapi/v1.json
 
 ## 1. Trạng thái môi trường hiện tại
 
-Đã kiểm tra ngày 13/10/2026:
+Đã kiểm tra ngày 15/10/2026:
 
 | Thành phần | Trạng thái |
 |---|---|
@@ -75,12 +198,12 @@ GET http://localhost:8080/openapi/v1.json
 | pgAdmin 4 | Có tại `C:\Program Files\PostgreSQL\18\pgAdmin 4` |
 | Docker | Không bắt buộc cho local development |
 | `global.json` | Đã pin SDK `10.0.401` |
-| Backend solution | `TutorManagementSystem.slnx` |
+| Backend solution | `TutorManagementSystem.sln` truyền thống dành cho Visual Studio và CLI |
 | Backend projects | 24 project |
 | Build Release | Thành công, 0 warning, 0 error |
-| Tests | 10/10 passed |
+| Tests | 34/34 passed (3 architecture + 31 integration/application) |
 | NuGet audit | Không phát hiện package có lỗ hổng đã biết |
-| EF migrations | Đã có migration nền cho 3 module đầu tiên |
+| EF migrations | Authentication, refresh-token family, email verification, center approval, invitation và membership đã áp dụng; 3 schema có migration history riêng |
 
 Kiểm tra nhanh PostgreSQL local bất kỳ lúc nào:
 
@@ -206,38 +329,44 @@ Kết quả mong đợi hiện tại: `10.0.401`.
 
 ---
 
-## 5. Bước 2 - Tạo solution và solution filters
+## 5. Bước 2 - Tạo solution và solution folders
 
-Với .NET 10, `dotnet new sln` mặc định tạo solution theo định dạng mới `.slnx`.
-Solution hiện đã tồn tại, kiểm tra bằng:
+Với .NET 10, `dotnet new sln` mặc định có thể tạo định dạng mới `.slnx`. Dự án
+này chủ động chỉ giữ file `.sln` truyền thống để tương thích tốt với cách làm việc
+quen thuộc trong Visual Studio. Các project C# vẫn là những project độc lập nhưng
+được gom bằng **Solution Folder** để Solution Explorer dễ đọc:
+
+```text
+TutorManagementSystem
+├── Hosts
+├── BuildingBlocks
+├── Modules
+│   ├── IdentityAccess
+│   ├── Organizations
+│   └── Academics
+└── Tests
+```
+
+Solution Folder chỉ tổ chức cách hiển thị trong Visual Studio; nó không thay đổi
+đường dẫn vật lý, namespace hay chiều phụ thuộc giữa các project.
+Kiểm tra bằng:
 
 ```powershell
-Test-Path -LiteralPath .\TutorManagementSystem.slnx
+Test-Path -LiteralPath .\TutorManagementSystem.sln
 ```
 
 Kết quả phải là `True`. Chỉ khi file chưa tồn tại mới chạy:
 
 ```powershell
-dotnet new sln --name TutorManagementSystem
+dotnet new sln --name TutorManagementSystem --format sln
 ```
 
-Các lệnh trong tài liệu này vì vậy sử dụng `TutorManagementSystem.slnx`, không
-sử dụng `TutorManagementSystem.sln`.
+File `.csproj` bên trong từng thư mục là metadata bắt buộc của project .NET, không
+phải file config thay cho Class Library. Mở cả folder sẽ thấy file vật lý; mở
+`TutorManagementSystem.sln` sẽ thấy giao diện project giống Solution Explorer.
 
-Sau khi có nhiều project, tạo solution filter:
-
-```text
-TutorManagementSystem.Api.slnf
-TutorManagementSystem.Tests.slnf
-```
-
-Mục đích:
-
-- Solution chính chứa toàn bộ backend.
-- API filter chỉ load host và module cần chạy.
-- Test filter tối ưu thời gian load IDE/CI job.
-
-Không tạo nhiều solution độc lập cho từng module; điều đó làm dependency và build toàn hệ thống khó kiểm soát.
+Không tạo nhiều solution độc lập cho từng module; solution chính chứa toàn bộ
+backend và các Solution Folder chịu trách nhiệm tổ chức cách hiển thị.
 
 ---
 
@@ -320,19 +449,16 @@ dotnet new classlib --name TutorManagement.WebApi `
 
 ### SharedKernel chỉ chứa
 
-- `Entity`, `AggregateRoot`, `ValueObject`.
-- Domain event abstractions.
-- Strongly typed IDs.
-- `Result`/`Error` primitives thật sự dùng chung.
+- `Entity`, `AggregateRoot` và `Result`/`Error` đang được sử dụng.
+- Chỉ bổ sung value object/domain event khi có nghiệp vụ và nơi xử lý thực tế.
 
 Không đặt business entity như Student, Payment hoặc Teacher trong SharedKernel.
 
 ### Application.Abstractions chỉ chứa
 
 - Command/query handler contracts.
-- Unit of work/transaction contracts chung.
-- Current user, clock và authorization abstractions.
-- Cross-cutting pipeline behaviors contracts.
+- Command/query handler contracts và clock abstraction.
+- Unit of work được định nghĩa theo module, không duy trì interface chung chưa dùng.
 
 ### Infrastructure building block chỉ chứa
 
@@ -342,7 +468,7 @@ Không đặt business entity như Student, Payment hoặc Teacher trong SharedK
 
 ### WebApi building block chỉ chứa
 
-- `ApiResponse<T>` và `PagedResponse<T>`.
+- `ApiResponse<T>`; chỉ thêm response phân trang khi có endpoint phân trang.
 - API error model.
 - Versioning/model binding/OpenAPI conventions.
 - Không chứa controller của module.
@@ -384,7 +510,7 @@ Building Blocks và các module đầu tiên. Giới hạn tìm kiếm trong `ba
 
 ```powershell
 $backendRoot = 'D:\Project\QuanLyDayThem\backend'
-$solutionPath = Join-Path $backendRoot 'TutorManagementSystem.slnx'
+$solutionPath = Join-Path $backendRoot 'TutorManagementSystem.sln'
 
 $projectPaths = @(
   Get-ChildItem `
@@ -396,28 +522,36 @@ $projectPaths = @(
   Select-Object -ExpandProperty FullName
 )
 
-if ($projectPaths.Count -eq 0) {
-  Write-Warning 'Chưa có project .csproj. Bỏ qua bước add; hãy scaffold project trước.'
+$solutionGroups = [ordered]@{
+  'Hosts' = @($projectPaths | Where-Object { $_ -like (Join-Path $backendRoot 'src\Hosts\*') })
+  'BuildingBlocks' = @($projectPaths | Where-Object { $_ -like (Join-Path $backendRoot 'src\BuildingBlocks\*') })
+  'Modules\IdentityAccess' = @($projectPaths | Where-Object { $_ -like (Join-Path $backendRoot 'src\Modules\IdentityAccess\*') })
+  'Modules\Organizations' = @($projectPaths | Where-Object { $_ -like (Join-Path $backendRoot 'src\Modules\Organizations\*') })
+  'Modules\Academics' = @($projectPaths | Where-Object { $_ -like (Join-Path $backendRoot 'src\Modules\Academics\*') })
+  'Tests' = @($projectPaths | Where-Object { $_ -like (Join-Path $backendRoot 'tests\*') })
 }
-else {
-  dotnet sln $solutionPath add $projectPaths
+
+foreach ($solutionGroup in $solutionGroups.GetEnumerator()) {
+  $groupProjects = @($solutionGroup.Value)
+
+  if ($groupProjects.Count -gt 0) {
+    dotnet sln $solutionPath add $groupProjects `
+      --solution-folder $solutionGroup.Key `
+      --include-references false
+  }
 }
 ```
 
 Kiểm tra:
 
 ```powershell
-dotnet sln .\TutorManagementSystem.slnx list
+dotnet sln .\TutorManagementSystem.sln list
 ```
 
-Nhóm solution folder trong IDE:
-
-- `Hosts`.
-- `BuildingBlocks`.
-- `Modules/IdentityAccess`.
-- `Modules/Organizations`.
-- `Modules/Academics`.
-- `Tests`.
+Trong Visual Studio, 24 project được gom vào `Hosts`, `BuildingBlocks`, `Modules`
+và `Tests`. Bên trong `Modules` tiếp tục tách theo bounded context. Đây là
+Solution Folder để điều hướng; từng node `TutorManagement.*` bên trong vẫn là
+project C# thật với file `.csproj` riêng.
 
 ---
 
@@ -733,7 +867,7 @@ Thiết lập trước khi viết feature controller:
 ### 16.1. Response contract
 
 - `ApiResponse<T>`.
-- `PagedResponse<T>`.
+- Response phân trang sẽ được thiết kế khi có endpoint phân trang thực tế.
 - `ApiError` có `code`, `field`, `message`.
 - `traceId` trong response.
 - Không trả EF entity.
@@ -950,11 +1084,11 @@ Không deploy nếu:
 ```text
 ASPNETCORE_ENVIRONMENT
 ConnectionStrings__MainDatabase
-Auth__Jwt__Issuer
-Auth__Jwt__Audience
-Auth__Jwt__SigningKey
-Auth__Jwt__AccessTokenMinutes
-Auth__Jwt__RefreshTokenDays
+Jwt__Issuer
+Jwt__Audience
+Jwt__SigningKey
+Jwt__AccessTokenMinutes
+Jwt__RefreshTokenDays
 Cors__AllowedOrigins__0
 Observability__ServiceName
 Observability__OtlpEndpoint
