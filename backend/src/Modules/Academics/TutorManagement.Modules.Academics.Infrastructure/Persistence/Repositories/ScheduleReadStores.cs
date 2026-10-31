@@ -77,7 +77,7 @@ public sealed class StudentTimetableStore(AcademicsDbContext db) : IStudentTimet
               AND s.center_id <> @center AND s.cancelled_at_utc IS NULL AND s.not_held_at_utc IS NULL
               AND s.start_utc < @end AND s.end_utc > @start
             """, new NpgsqlParameter("center", centerId), new NpgsqlParameter("teacher", teacherId),
-            new NpgsqlParameter("start", startUtc), new NpgsqlParameter("end", endUtc)).FirstAsync(token);
+            new NpgsqlParameter("start", startUtc), new NpgsqlParameter("end", endUtc)).SingleAsync(token);
 
     internal static async Task<Dictionary<Guid, string>> ReadRoomNamesAsync(AcademicsDbContext db,
         IReadOnlyCollection<Guid> roomIds, CancellationToken token)

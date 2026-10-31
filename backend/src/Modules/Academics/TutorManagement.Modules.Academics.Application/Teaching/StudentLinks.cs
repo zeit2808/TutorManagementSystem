@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using TutorManagement.Application.Abstractions.Clock;
+using TutorManagement.Modules.Academics.Application.Codes;
+using TutorManagement.Modules.Academics.Domain;
 using TutorManagement.Modules.Academics.Domain.Teaching;
 using TutorManagement.SharedKernel.Primitives;
 
@@ -354,8 +356,8 @@ public sealed class StudentAccessWorkflow(IStudentLinkStore store, ITeachingStor
 // ---------- Student side ----------
 
 /// <summary>M3 for the student: open an activation link or a class invite link while signed in with a student login.</summary>
-public sealed class StudentJoinWorkflow(IStudentLinkStore store, ITeachingStore teaching, IStudentTimetableStore timetable,
-    ICourseDirectoryStore directory, IClock clock, ScheduleConflictChecker? conflicts = null)
+public sealed class StudentJoinWorkflow(IStudentLinkStore store, ITeachingStore teaching, IAcademicsCodeGenerator codes,
+    IStudentTimetableStore timetable, ICourseDirectoryStore directory, IClock clock, ScheduleConflictChecker? conflicts = null)
 {
     public async Task<Result<ActivationPreviewDto>> PreviewActivationAsync(string token, Guid userId,
         CancellationToken cancellationToken)
@@ -520,7 +522,7 @@ public sealed class StudentJoinWorkflow(IStudentLinkStore store, ITeachingStore 
         var created = student is null;
         if (student is null)
         {
-            var studentCode = await teaching.NextStudentCodeAsync(centerId, cancellationToken);
+            var studentCode = await codes.NextAsync(centerId, AcademicsCodes.Student, cancellationToken);
             student = Student.CreateForUser(centerId, userId, studentCode, fullName!, now);
             student.AdoptParentContactIfMissing(parentName, normalizedPhone);
             await store.AddAsync(student, cancellationToken);

@@ -55,7 +55,7 @@ public sealed class CourseDirectoryStore(AcademicsDbContext db) : ICourseDirecto
     public async Task<string?> FindListedCenterNameAsync(Guid centerId, CancellationToken token) =>
         await db.Database.SqlQueryRaw<string>($"""
             SELECT ce.display_name AS "Value" FROM organization.centers ce WHERE ce.id = @center AND {ListedCenter}
-            """, new NpgsqlParameter("center", centerId)).FirstOrDefaultAsync(token);
+            """, new NpgsqlParameter("center", centerId)).SingleOrDefaultAsync(token);
 
     public async Task<IReadOnlyList<DirectoryClassRow>> ListOpenClassesAsync(Guid centerId, string? subject,
         CancellationToken token) =>

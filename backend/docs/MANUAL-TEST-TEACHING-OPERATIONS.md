@@ -21,12 +21,12 @@ Trước khi tạo lớp, ở nhóm `05 · Subjects` tạo hoặc chọn môn ac
 
 ## 3. Luồng đầy đủ nên thử theo thứ tự
 
-1. **Tạo lớp** — `POST /classes`, body `{"subjectId":"<subjectId>","code":"L-TEST-01","name":"Lớp thử 01","maxStudents":2}`. Kỳ vọng `201`, `data.enrolledCount=0`, `data.version=0`. Ghi `classId`.
-2. **Tạo hai học sinh** — hai lần `POST /students`: `{"code":"HS-TEST-01","fullName":"Học sinh Một"}` và `{"code":"HS-TEST-02","fullName":"Học sinh Hai"}`. Kỳ vọng `201`, ghi hai `studentId`. Đây là hồ sơ học sinh theo trung tâm, chưa phải tài khoản đăng nhập.
+1. **Tạo lớp** — `POST /classes`, body `{"subjectId":"<subjectId>","name":"Lớp thử 01","maxStudents":2}`. Kỳ vọng `201`, `data.code` dạng `LH-000001` (server tự sinh), `data.enrolledCount=0`, `data.version=0`. Ghi `classId`.
+2. **Tạo hai học sinh** — hai lần `POST /students`: `{"fullName":"Học sinh Một","parentName":"Phụ huynh Một","parentPhone":"0912345678"}` và `{"fullName":"Học sinh Hai","parentName":"Phụ huynh Hai","parentPhone":"0987654321"}`. Kỳ vọng `201`, `data.code` là `HS-000001`, `HS-000002`… theo trung tâm; ghi hai `studentId`. Đây là hồ sơ học sinh theo trung tâm, chưa phải tài khoản đăng nhập.
 3. **Ghi danh** — `POST /classes/{classId}/enrollments` với `{"studentId":"<studentId-1>"}`, sau đó học sinh 2. Kỳ vọng mỗi lần `201`; `GET /classes/{classId}` thấy `enrolledCount=2`, `version=2`.
 4. **Thử vượt sĩ số** — tạo học sinh 3, ghi danh vào lớp trên. Kỳ vọng `409`, `class_full`, số học sinh vẫn là 2. Ghi danh lại học sinh 1 cũng phải `409`, `student_already_enrolled`.
 5. **Rút học** — `DELETE /classes/{classId}/enrollments/{studentId-1}`. Kỳ vọng `200`, `status=Withdrawn`, `withdrawnAtUtc` có giá trị, `enrolledCount=1`; sau đó có thể ghi danh học sinh 3. `GET /classes/{classId}/enrollments` mặc định chỉ trả người đang học; dùng `?status=withdrawn` hoặc `?status=all` để xem lịch sử. Response có `data.items` phân trang, mã và tên học sinh. Cùng một học sinh có thể ghi danh lại về sau bằng bản ghi mới. Xem `API-RESPONSE-CONTRACT.md` để biết đầy đủ contract mới.
-6. **Tạo giáo viên** — `POST /teachers` với `{"code":"GV-TEST-01","fullName":"Giáo viên Một"}`. Kỳ vọng `201`, ghi `teacherId`. Đây là hồ sơ tài nguyên giảng dạy, **không tự tạo tài khoản IAM** cho giáo viên.
+6. **Tạo giáo viên** — `POST /teachers` với `{"fullName":"Giáo viên Một"}`. Kỳ vọng `201`, `data.code` dạng `GV-000001`, ghi `teacherId`. Đây là hồ sơ tài nguyên giảng dạy, **không tự tạo tài khoản IAM** cho giáo viên.
 7. **Xếp buổi dạy** — `POST /sessions` với `{"classId":"<classId>","teacherId":"<teacherId>","roomId":"<roomId>","startUtc":"2026-11-02T10:00:00Z","endUtc":"2026-11-02T12:00:00Z"}`. Hãy thay ngày bằng ngày **tương lai** khi test. Kỳ vọng `201`, ghi `sessionId`, `version=0`. Dùng UTC có hậu tố `Z`; giờ Việt Nam = UTC+7. Thời lượng phải 15 phút–8 giờ.
 8. **Xem lịch** — `GET /sessions?fromUtc=2026-11-02T00:00:00Z&toUtc=2026-11-03T00:00:00Z` (điều chỉnh theo ngày đã chọn). Kỳ vọng `200` và có buổi vừa tạo. Khoảng tìm tối đa 31 ngày; buổi chạm mép khoảng vẫn được hiển thị nếu thực sự giao nhau.
 9. **Thử trùng lịch** — tạo buổi 11:00–13:00 cùng lớp, cùng giáo viên hoặc cùng phòng. Kỳ vọng `409`, `schedule_conflict`. Buổi 12:00–13:00 **được phép** vì sát mép nhưng không chồng giờ. Muốn thử từng tài nguyên riêng, tạo thêm lớp/giáo viên/phòng để chỉ trùng một loại ID mỗi lần.
@@ -50,7 +50,7 @@ Môn học có lớp active cũng không được archive (`409 subject_has_acti
 | Member không thuộc trung tâm hoặc trung tâm chưa được duyệt | `403` trước khi vào nghiệp vụ. |
 | Member `Teacher`/`Staff` gọi POST/PUT/archive | `403`; chỉ Owner/Admin được sửa. |
 | Dùng ID lớp/học sinh/giáo viên ở center khác | Không truy cập được tài nguyên; không chuyển dữ liệu xuyên center. |
-| Mã lớp/học sinh/giáo viên trùng trong cùng center | `409 teaching_code_exists`; mã ở center khác có thể giống. |
+| Gửi kèm `code` khi tạo lớp/học sinh/giáo viên | Bị bỏ qua: mã luôn do server sinh (D9), không bao giờ trùng trong một center; center khác có dãy số riêng. |
 | Body thiếu ID, tên trống, `maxStudents=0/501` | `400 validation_error`, có tên field. |
 | Sửa với `expectedVersion` cũ | `409 teaching_concurrent_change`; GET lại rồi quyết định có sửa tiếp không. |
 | Hai người cùng ghi danh vào ghế cuối | Chỉ một giao dịch thành công; người còn lại nhận lỗi hết chỗ/xung đột, không vượt `maxStudents`. |

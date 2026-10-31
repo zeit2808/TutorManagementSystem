@@ -1,26 +1,26 @@
 using TutorManagement.Application.Abstractions.Clock;
+using TutorManagement.Modules.Academics.Application.Codes;
+using TutorManagement.Modules.Academics.Domain;
 using TutorManagement.Modules.Academics.Domain.Teaching;
 using TutorManagement.SharedKernel.Primitives;
 
 namespace TutorManagement.Modules.Academics.Application.Teaching;
 
-public sealed class PeopleCatalog(ITeachingStore store, IClock clock, IStudentLinkStore? links = null)
+public sealed class PeopleCatalog(ITeachingStore store, IAcademicsCodeGenerator codes, IClock clock,
+    IStudentLinkStore? links = null)
 {
     /// <summary>
-    /// Creates a student kept by the center. Leave <paramref name="code"/> empty to get the next HS-000001
-    /// style code (D9); the parent name and mobile number are required (D5).
+    /// Creates a student kept by the center with the next HS-000001 style code (D9); the parent name and mobile
+    /// number are required (D5).
     /// </summary>
-    public async Task<Result<StudentDto>> CreateStudentAsync(Guid centerId, string? code, string fullName,
+    public async Task<Result<StudentDto>> CreateStudentAsync(Guid centerId, string fullName,
         string parentName, string parentPhone, CancellationToken token)
     {
-        var autoCode = string.IsNullOrWhiteSpace(code);
-        if (centerId == Guid.Empty || (!autoCode && !TeachingClass.IsValidCode(code)) || !TeachingClass.IsValidName(fullName))
+        if (centerId == Guid.Empty || !TeachingClass.IsValidName(fullName))
             return Result<StudentDto>.Failure(TeachingErrors.Invalid);
         if (!ParentContact.IsValidName(parentName)) return Result<StudentDto>.Failure(TeachingErrors.InvalidParentName);
         if (!ParentContact.TryNormalizePhone(parentPhone, out _)) return Result<StudentDto>.Failure(TeachingErrors.InvalidParentPhone);
-        if (!autoCode && await store.StudentCodeExistsAsync(centerId, TeachingClass.NormalizeCode(code!), token))
-            return Result<StudentDto>.Failure(TeachingErrors.CodeExists);
-        var finalCode = autoCode ? await store.NextStudentCodeAsync(centerId, token) : code!;
+        var finalCode = await codes.NextAsync(centerId, AcademicsCodes.Student, token);
         var value = Student.Create(centerId, finalCode, fullName, clock.UtcNow);
         value.UpdateProfile(fullName, parentName, parentPhone);
         await store.AddAsync(value, token);
@@ -66,12 +66,12 @@ public sealed class PeopleCatalog(ITeachingStore store, IClock clock, IStudentLi
         return Result<StudentDto>.Success(StudentDto.From(value));
     }
 
-    public async Task<Result<TeacherDto>> CreateTeacherAsync(Guid centerId, string code, string fullName, CancellationToken token)
+    /// <summary>Creates a teacher profile with the next GV-000001 style code (D9).</summary>
+    public async Task<Result<TeacherDto>> CreateTeacherAsync(Guid centerId, string fullName, CancellationToken token)
     {
-        if (centerId == Guid.Empty || !TeachingClass.IsValidCode(code) || !TeachingClass.IsValidName(fullName))
+        if (centerId == Guid.Empty || !TeachingClass.IsValidName(fullName))
             return Result<TeacherDto>.Failure(TeachingErrors.Invalid);
-        if (await store.TeacherCodeExistsAsync(centerId, TeachingClass.NormalizeCode(code), token))
-            return Result<TeacherDto>.Failure(TeachingErrors.CodeExists);
+        var code = await codes.NextAsync(centerId, AcademicsCodes.Teacher, token);
         var value = Teacher.Create(centerId, code, fullName, clock.UtcNow);
         await store.AddAsync(value, token);
         try { await store.SaveAsync(token); }

@@ -9,6 +9,7 @@ using TutorManagement.Modules.Academics.Domain.Subjects;
 using TutorManagement.Modules.Academics.Domain.Teaching;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence.Repositories;
+using TutorManagement.Modules.Academics.Infrastructure.Persistence.Codes;
 using TutorManagement.Modules.Academics.Application.Subjects.ArchiveSubject;
 using TutorManagement.Modules.Academics.Application.Subjects;
 using TutorManagement.Modules.Academics.Application.Subjects.Abstractions;
@@ -54,21 +55,22 @@ public sealed class RealPostgresTeachingFlowTests
             await db.SaveChangesAsync();
             var store = new TeachingStore(db);
             var subjectGuard = new SubjectClassGuard(db);
-            var classes = new ClassCatalog(store, subjectGuard, clock);
-            var people = new PeopleCatalog(store, clock);
+            var codes = new AcademicsCodeGenerator(db);
+            var classes = new ClassCatalog(store, codes, subjectGuard, clock);
+            var people = new PeopleCatalog(store, codes, clock);
             var enrollments = new EnrollmentWorkflow(store, clock);
             var scheduler = new SessionScheduler(store, clock);
 
-            var group = await classes.CreateAsync(center.Id, subject.Id, "C1", "Test class", 1, actorId, default);
+            var group = await classes.CreateAsync(center.Id, subject.Id, "Test class", 1, actorId, default);
             Assert.True(group.IsSuccess);
             var archiveSubject = new ArchiveSubjectCommandHandler(new SubjectRepository(db),
                 (IAcademicsUnitOfWork)db, subjectGuard, clock);
             var cannotArchiveSubject = await archiveSubject.HandleAsync(
                 new(center.Id, subject.Id, actorId, subject.Version), default);
             Assert.Equal(SubjectErrors.HasActiveClasses, cannotArchiveSubject.Error);
-            var firstStudent = await people.CreateStudentAsync(center.Id, "ST1", "First student", "Parent One", "0912345678", default);
-            var secondStudent = await people.CreateStudentAsync(center.Id, "ST2", "Second student", "Parent Two", "0987654321", default);
-            var teacher = await people.CreateTeacherAsync(center.Id, "TC1", "Test teacher", default);
+            var firstStudent = await people.CreateStudentAsync(center.Id, "First student", "Parent One", "0912345678", default);
+            var secondStudent = await people.CreateStudentAsync(center.Id, "Second student", "Parent Two", "0987654321", default);
+            var teacher = await people.CreateTeacherAsync(center.Id, "Test teacher", default);
             Assert.True(firstStudent.IsSuccess && secondStudent.IsSuccess && teacher.IsSuccess);
 
             var firstClassPage = await classes.ListAsync(center.Id, false, 1, 1, default);
@@ -86,7 +88,7 @@ public sealed class RealPostgresTeachingFlowTests
             Assert.True(roster.IsSuccess);
             var firstEntry = Assert.Single(roster.Value.Items);
             Assert.Equal(first.Value.Id, firstEntry.EnrollmentId);
-            Assert.Equal("ST1", firstEntry.StudentCode);
+            Assert.Equal("HS-000001", firstEntry.StudentCode);
             Assert.Equal("First student", firstEntry.FullName);
             Assert.Equal("Active", firstEntry.Status);
             Assert.Null(firstEntry.WithdrawnAtUtc);
@@ -99,7 +101,7 @@ public sealed class RealPostgresTeachingFlowTests
 
             // Both requests read a free seat. Only the first UPDATE may advance the
             // class version; the second transaction must roll back its enrollment.
-            var raceClass = await classes.CreateAsync(center.Id, subject.Id, "C2", "Race class", 1, actorId, default);
+            var raceClass = await classes.CreateAsync(center.Id, subject.Id, "Race class", 1, actorId, default);
             Assert.True(raceClass.IsSuccess);
             await using (var firstWriter = new AcademicsDbContext(academicOptions))
             await using (var secondWriter = new AcademicsDbContext(academicOptions))
@@ -187,6 +189,7 @@ public sealed class RealPostgresTeachingFlowTests
                 DELETE FROM academics.teaching_sessions WHERE center_id = @center;
                 DELETE FROM academics.enrollments WHERE center_id = @center;
                 DELETE FROM academics.classes WHERE center_id = @center;
+                DELETE FROM academics.code_counters WHERE center_id = @center;
                 DELETE FROM academics.students WHERE center_id = @center;
                 DELETE FROM academics.teachers WHERE center_id = @center;
                 DELETE FROM academics.subjects WHERE center_id = @center;

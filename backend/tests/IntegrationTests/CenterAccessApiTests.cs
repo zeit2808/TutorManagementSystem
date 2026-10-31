@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
+using TutorManagement.Modules.Academics.Application.Codes;
 using TutorManagement.Modules.Academics.Application.Subjects.Abstractions;
 using TutorManagement.Modules.Academics.Domain.Subjects;
 using TutorManagement.Modules.IdentityAccess.Application.Centers.Abstractions;
@@ -16,8 +17,10 @@ using TutorManagement.Modules.IdentityAccess.Application.Authentication.Abstract
 using TutorManagement.Modules.IdentityAccess.Domain.Authentication;
 using TutorManagement.Modules.Organizations.Contracts.Centers;
 using TutorManagement.Modules.Organizations.Application.Centers.Abstractions;
+using TutorManagement.Modules.Organizations.Application.Codes;
 using TutorManagement.Modules.Organizations.Application.Rooms.Abstractions;
 using TutorManagement.Modules.Organizations.Domain.Rooms;
+using TutorManagement.SharedKernel.Primitives;
 
 namespace TutorManagement.IntegrationTests;
 
@@ -167,12 +170,12 @@ public sealed class CenterAccessApiTests : IClassFixture<CenterAccessApiTests.Fa
     public async Task Catalogs_support_xml_with_populated_responses(string catalog)
     {
         var path = $"/api/v1/centers/{ApprovedCenterId}/{catalog}";
-        var code = "XML" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var name = "XML" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         using var create = AuthorizedRequest(OwnerId, path);
         create.Method = HttpMethod.Post;
         create.Content = catalog == "rooms"
-            ? JsonContent.Create(new { code, name = code })
-            : JsonContent.Create(new { code, name = code, description = "XML test" });
+            ? JsonContent.Create(new { name })
+            : JsonContent.Create(new { name, description = "XML test" });
         using var created = await _client.SendAsync(create);
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
 
@@ -181,7 +184,7 @@ public sealed class CenterAccessApiTests : IClassFixture<CenterAccessApiTests.Fa
         using var response = await _client.SendAsync(request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
-        Assert.Contains(code, await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Contains(name, await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -202,15 +205,18 @@ public sealed class CenterAccessApiTests : IClassFixture<CenterAccessApiTests.Fa
     [Fact]
     public async Task Center_owner_can_create_update_archive_and_reactivate_room_through_api()
     {
-        var code = "R" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var name = "R" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         var path = $"/api/v1/centers/{ApprovedCenterId}/rooms";
         using var create = AuthorizedRequest(OwnerId, path);
         create.Method = HttpMethod.Post;
-        create.Content = JsonContent.Create(new { code, name = code, locationNote = "Floor 2" });
+        // A code sent by an old client is ignored: the server always generates one (D9).
+        create.Content = JsonContent.Create(new { code = "TYPED", name, locationNote = "Floor 2" });
         using var created = await _client.SendAsync(create);
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         using var body = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
         Assert.False(body.RootElement.GetProperty("data").TryGetProperty("capacity", out _));
+        var code = body.RootElement.GetProperty("data").GetProperty("code").GetString()!;
+        Assert.Matches("^PH-[0-9]{6}$", code);
         var roomId = body.RootElement.GetProperty("data").GetProperty("id").GetGuid();
 
         using var read = AuthorizedRequest(TeacherId, $"{path}/{roomId}");
@@ -219,22 +225,23 @@ public sealed class CenterAccessApiTests : IClassFixture<CenterAccessApiTests.Fa
 
         using var duplicate = AuthorizedRequest(ManagerId, path);
         duplicate.Method = HttpMethod.Post;
-        duplicate.Content = JsonContent.Create(new { code, name = "Another room" });
+        duplicate.Content = JsonContent.Create(new { name = name.ToLowerInvariant() });
         using var duplicateResponse = await _client.SendAsync(duplicate);
         Assert.Equal(HttpStatusCode.Conflict, duplicateResponse.StatusCode);
-        Assert.Contains("room_code_already_exists", await duplicateResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Contains("room_name_already_exists", await duplicateResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
 
         using var invalid = AuthorizedRequest(ManagerId, $"{path}/{roomId}");
         invalid.Method = HttpMethod.Put;
-        invalid.Content = JsonContent.Create(new { code, name = code });
+        invalid.Content = JsonContent.Create(new { name });
         using var invalidResponse = await _client.SendAsync(invalid);
         Assert.Equal(HttpStatusCode.BadRequest, invalidResponse.StatusCode);
 
         using var update = AuthorizedRequest(ManagerId, $"{path}/{roomId}");
         update.Method = HttpMethod.Put;
-        update.Content = JsonContent.Create(new { code, name = code, locationNote = "Floor 3", expectedVersion = 0 });
+        update.Content = JsonContent.Create(new { name, locationNote = "Floor 3", expectedVersion = 0 });
         using var updated = await _client.SendAsync(update);
         Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+        Assert.Contains(code, await updated.Content.ReadAsStringAsync(), StringComparison.Ordinal);
 
         using var stale = AuthorizedRequest(OwnerId, $"{path}/{roomId}/archive");
         stale.Method = HttpMethod.Post;
@@ -276,15 +283,16 @@ public sealed class CenterAccessApiTests : IClassFixture<CenterAccessApiTests.Fa
     [Fact]
     public async Task Center_owner_can_create_read_archive_and_reactivate_subject_through_api()
     {
-        var code = "MATH" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var name = "Toán " + Guid.NewGuid().ToString("N")[..8];
         var path = $"/api/v1/centers/{ApprovedCenterId}/subjects";
         using var create = AuthorizedRequest(OwnerId, path);
         create.Method = HttpMethod.Post;
-        create.Content = JsonContent.Create(new { code, name = "Toán", description = "Môn học thử" });
+        create.Content = JsonContent.Create(new { name, description = "Môn học thử" });
         using var created = await _client.SendAsync(create);
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         using var body = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
         var subjectId = body.RootElement.GetProperty("data").GetProperty("id").GetGuid();
+        Assert.Matches("^MH-[0-9]{6}$", body.RootElement.GetProperty("data").GetProperty("code").GetString());
 
         using var read = AuthorizedRequest(TeacherId, $"{path}/{subjectId}");
         using var found = await _client.SendAsync(read);
@@ -292,16 +300,16 @@ public sealed class CenterAccessApiTests : IClassFixture<CenterAccessApiTests.Fa
 
         using var missingVersion = AuthorizedRequest(ManagerId, $"{path}/{subjectId}");
         missingVersion.Method = HttpMethod.Put;
-        missingVersion.Content = JsonContent.Create(new { code, name = "Toán nâng cao" });
+        missingVersion.Content = JsonContent.Create(new { name = "Toán nâng cao" });
         using var rejected = await _client.SendAsync(missingVersion);
         Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
 
         using var update = AuthorizedRequest(ManagerId, $"{path}/{subjectId}");
         update.Method = HttpMethod.Put;
-        update.Content = JsonContent.Create(new { code, name = "Toán nâng cao", description = "Đã cập nhật", expectedVersion = 0 });
+        update.Content = JsonContent.Create(new { name = name + " nâng cao", description = "Đã cập nhật", expectedVersion = 0 });
         using var updated = await _client.SendAsync(update);
         Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
-        Assert.Contains("Toán nâng cao", await updated.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Contains(name + " nâng cao", await updated.Content.ReadAsStringAsync(), StringComparison.Ordinal);
 
         using var archive = AuthorizedRequest(OwnerId, $"{path}/{subjectId}/archive");
         archive.Method = HttpMethod.Post;
@@ -370,6 +378,10 @@ public sealed class CenterAccessApiTests : IClassFixture<CenterAccessApiTests.Fa
                 services.AddSingleton<IRoomArchiveGuard, FakeRoomArchiveGuard>();
                 services.RemoveAll<IOrganizationUnitOfWork>();
                 services.AddSingleton<IOrganizationUnitOfWork, FakeOrganizationUnitOfWork>();
+                services.RemoveAll<IAcademicsCodeGenerator>();
+                services.AddSingleton<IAcademicsCodeGenerator, FakeCodeGenerator>();
+                services.RemoveAll<IOrganizationCodeGenerator>();
+                services.AddSingleton<IOrganizationCodeGenerator, FakeCodeGenerator>();
             });
         }
     }
@@ -452,10 +464,6 @@ public sealed class CenterAccessApiTests : IClassFixture<CenterAccessApiTests.Fa
             Task.FromResult<IReadOnlyList<Subject>>(_subjects.Values
                 .Where(subject => subject.CenterId == centerId && (includeArchived || subject.IsActive)).ToArray());
 
-        public Task<bool> CodeExistsAsync(Guid centerId, string normalizedCode, Guid? excludingId,
-            CancellationToken cancellationToken) => Task.FromResult(_subjects.Values.Any(subject =>
-                subject.CenterId == centerId && subject.NormalizedCode == normalizedCode && subject.Id != excludingId));
-
         public Task<bool> NameExistsAsync(Guid centerId, string normalizedName, Guid? excludingId,
             CancellationToken cancellationToken) => Task.FromResult(_subjects.Values.Any(subject =>
                 subject.CenterId == centerId && subject.NormalizedName == normalizedName && subject.Id != excludingId));
@@ -483,10 +491,6 @@ public sealed class CenterAccessApiTests : IClassFixture<CenterAccessApiTests.Fa
             Task.FromResult<IReadOnlyList<Room>>(_rooms.Values
                 .Where(room => room.CenterId == centerId && (includeArchived || room.IsActive)).ToArray());
 
-        public Task<bool> CodeExistsAsync(Guid centerId, string normalizedCode, Guid? excludingId,
-            CancellationToken cancellationToken) => Task.FromResult(_rooms.Values.Any(room =>
-                room.CenterId == centerId && room.NormalizedCode == normalizedCode && room.Id != excludingId));
-
         public Task<bool> NameExistsAsync(Guid centerId, string normalizedName, Guid? excludingId,
             CancellationToken cancellationToken) => Task.FromResult(_rooms.Values.Any(room =>
                 room.CenterId == centerId && room.NormalizedName == normalizedName && room.Id != excludingId));
@@ -495,6 +499,22 @@ public sealed class CenterAccessApiTests : IClassFixture<CenterAccessApiTests.Fa
         {
             _rooms.Add(room.Id, room);
             return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>Stands in for both modules' counter tables (D9).</summary>
+    private sealed class FakeCodeGenerator : IAcademicsCodeGenerator, IOrganizationCodeGenerator
+    {
+        private readonly Dictionary<(Guid, string), long> _counters = [];
+
+        public Task<string> NextAsync(Guid centerId, CodeKind kind, CancellationToken token)
+        {
+            lock (_counters)
+            {
+                var next = _counters.GetValueOrDefault((centerId, kind.Prefix)) + 1;
+                _counters[(centerId, kind.Prefix)] = next;
+                return Task.FromResult(EntityCode.Format(kind, next));
+            }
         }
     }
 

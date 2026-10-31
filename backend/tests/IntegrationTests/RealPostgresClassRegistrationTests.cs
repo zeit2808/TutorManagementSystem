@@ -10,6 +10,7 @@ using TutorManagement.Modules.Academics.Domain.Subjects;
 using TutorManagement.Modules.Academics.Domain.Teaching;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence.Repositories;
+using TutorManagement.Modules.Academics.Infrastructure.Persistence.Codes;
 using TutorManagement.Modules.IdentityAccess.Domain.Authentication;
 using TutorManagement.Modules.IdentityAccess.Infrastructure.Persistence;
 using TutorManagement.Modules.Organizations.Domain.Centers;
@@ -176,7 +177,7 @@ public sealed class RealPostgresClassRegistrationTests
         await using var db = new AcademicsDbContext(options);
         var mail = new ClassApplicationMail(new ScheduleChangeStore(db, clock, Links), new StudentTimetableStore(db));
         return await action(new ClassRegistrationWorkflow(new ClassRegistrationStore(db),
-            new TeachingStore(db), clock, mail: mail));
+            new TeachingStore(db), new AcademicsCodeGenerator(db), clock, mail: mail));
     }
 
     private static readonly ServiceProvider Links = new ServiceCollection()

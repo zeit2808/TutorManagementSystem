@@ -127,6 +127,7 @@ public sealed class PayrollSessionItemDto
     public Guid SessionId { get; init; }
     public Guid ClassId { get; init; }
     public string ClassCode { get; init; } = string.Empty;
+    public string ClassName { get; init; } = string.Empty;
     public DateTimeOffset StartUtc { get; init; }
     public int Minutes { get; init; }
     /// <summary>M2 pay for the session; null when no rate is set (blocks closing).</summary>
@@ -173,6 +174,7 @@ public sealed class PayrollUnassignedDto
 {
     public Guid ClassId { get; init; }
     public string ClassCode { get; init; } = string.Empty;
+    public string ClassName { get; init; } = string.Empty;
     public DateOnly PeriodStart { get; init; }
     public DateOnly PeriodEnd { get; init; }
     public long Amount { get; init; }
@@ -238,6 +240,7 @@ public sealed class PayrollUnsubmittedDto
 {
     public Guid SessionId { get; init; }
     public string ClassCode { get; init; } = string.Empty;
+    public string ClassName { get; init; } = string.Empty;
     public DateTimeOffset StartUtc { get; init; }
     public string TeacherName { get; init; } = string.Empty;
 }
@@ -278,6 +281,7 @@ public sealed class PayRateDto
     public string TeacherName { get; init; } = string.Empty;
     public Guid? ClassId { get; init; }
     public string? ClassCode { get; init; }
+    public string? ClassName { get; init; }
     public long Amount { get; init; }
     public DateOnly EffectiveFrom { get; init; }
     public string? CreatedByName { get; init; }

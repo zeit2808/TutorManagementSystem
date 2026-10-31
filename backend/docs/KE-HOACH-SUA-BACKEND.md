@@ -64,7 +64,7 @@ Nguyên tắc thực hiện:
 | D6 | Xử lý buổi không diễn ra / huỷ muộn? | Lý do bắt buộc; trạng thái "Không diễn ra" sau giờ bắt đầu; liên kết buổi học bù | ☑ Theo đề xuất: lý do bắt buộc; trạng thái "Không diễn ra"; buổi học bù liên kết với buổi gốc. |
 | D7 | Rút học: có cho lùi ngày hiệu lực? lý do bắt buộc? | Lý do bắt buộc; lùi tối đa 7 ngày và không qua buổi đã nộp điểm danh | ☑ **Lý do bắt buộc, hiệu lực ngay, không cho lùi ngày.** |
 | D8 | Trung tâm bị từ chối xử lý thế nào? Được duyệt thẳng từ "Từ chối"? | Sửa hồ sơ rồi nộp lại về "Chờ duyệt"; bỏ duyệt thẳng từ "Từ chối" | ☑ Không có ưu tiên → dùng đề xuất. |
-| D9 | Định dạng mã học sinh? | Tự sinh `HS-000001` theo trung tâm cho mọi hồ sơ; vẫn cho sửa khi tạo tay | ☑ Theo đề xuất. |
+| D9 | Định dạng mã học sinh? | Tự sinh `HS-000001` theo trung tâm cho mọi hồ sơ; vẫn cho sửa khi tạo tay | ☑ Theo đề xuất. **Mở rộng 26/10:** mọi mã danh mục (HS, GV, LH, MH, PH) đều do server sinh qua `CodeSequence` dùng chung + bảng `code_counters` của từng module; API không nhận mã, UI không hiển thị mã. |
 | D10 | Ai xem/huỷ yêu cầu đổi hồ sơ? | Chủ gửi & huỷ; Quản lý xem | ☑ Theo đề xuất. |
 | D11 | Lịch sử điểm danh ghi gì? | Chỉ Nộp và Hiệu chỉnh; nháp chỉ giữ bản mới nhất | ☑ Theo đề xuất. |
 | D12 | Múi giờ trung tâm? | Mỗi trung tâm một múi giờ, mặc định Asia/Ho_Chi_Minh | ☑ **Cố định giờ Việt Nam** (`Asia/Ho_Chi_Minh`) cho mọi trung tâm, không có ô chọn. |

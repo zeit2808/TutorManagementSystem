@@ -16,11 +16,6 @@ public sealed class SubjectRepository(AcademicsDbContext dbContext) : ISubjectRe
             .OrderBy(subject => subject.NormalizedName).ThenBy(subject => subject.NormalizedCode)
             .ToArrayAsync(cancellationToken);
 
-    public Task<bool> CodeExistsAsync(Guid centerId, string normalizedCode, Guid? excludingId,
-        CancellationToken cancellationToken) =>
-        dbContext.Subjects.AnyAsync(subject => subject.CenterId == centerId &&
-            subject.NormalizedCode == normalizedCode && (!excludingId.HasValue || subject.Id != excludingId.Value),
-            cancellationToken);
 
     public Task<bool> NameExistsAsync(Guid centerId, string normalizedName, Guid? excludingId,
         CancellationToken cancellationToken) =>

@@ -41,18 +41,18 @@ public sealed class Subject : AggregateRoot<Guid>
         return new Subject(centerId, code, name, description, actorId, nowUtc);
     }
 
-    public bool Update(string code, string name, string? description, Guid actorId, DateTimeOffset nowUtc)
+    /// <summary>Renames or re-describes the subject; its generated code (D9) never changes.</summary>
+    public bool Update(string name, string? description, Guid actorId, DateTimeOffset nowUtc)
     {
         if (!IsActive) throw new InvalidOperationException("An archived subject cannot be edited.");
         if (actorId == Guid.Empty) throw new ArgumentException("Actor is required.", nameof(actorId));
-        ValidateDetails(code, name, description);
-        var normalizedCode = NormalizeCode(code);
+        ValidateDetails(Code, name, description);
         var normalizedName = NormalizeName(name);
         var trimmedDescription = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
-        if (Code == normalizedCode && Name == normalizedName && Description == trimmedDescription)
+        if (Name == normalizedName && Description == trimmedDescription)
             return false;
 
-        SetDetails(code, name, description);
+        SetDetails(Code, name, description);
         UpdatedByUserId = actorId;
         UpdatedAtUtc = nowUtc;
         Version++;

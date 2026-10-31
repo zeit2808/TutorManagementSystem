@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
@@ -15,7 +15,7 @@ public sealed class TeachingStore(AcademicsDbContext db) : ITeachingStore
     public Task<bool> RoomIsActiveAsync(Guid centerId, Guid roomId, CancellationToken token) =>
         db.Database.SqlQueryRaw<bool>(
             "SELECT EXISTS(SELECT 1 FROM organization.rooms WHERE center_id = @center AND id = @room AND archived_at_utc IS NULL) AS \"Value\"",
-            new NpgsqlParameter("center", centerId), new NpgsqlParameter("room", roomId)).FirstAsync(token);
+            new NpgsqlParameter("center", centerId), new NpgsqlParameter("room", roomId)).SingleAsync(token);
 
     public Task<TeachingClass?> FindClassAsync(Guid centerId, Guid id, CancellationToken token) =>
         db.Classes.SingleOrDefaultAsync(x => x.CenterId == centerId && x.Id == id, token);
@@ -31,8 +31,6 @@ public sealed class TeachingStore(AcademicsDbContext db) : ITeachingStore
             .Skip((page - 1) * pageSize).Take(pageSize).ToArrayAsync(token);
         return (items, count);
     }
-    public Task<bool> ClassCodeExistsAsync(Guid centerId, string code, CancellationToken token) =>
-        db.Classes.AnyAsync(x => x.CenterId == centerId && x.Code == code, token);
 
     public Task<Student?> FindStudentAsync(Guid centerId, Guid id, CancellationToken token) =>
         db.Students.SingleOrDefaultAsync(x => x.CenterId == centerId && x.Id == id, token);
@@ -49,8 +47,6 @@ public sealed class TeachingStore(AcademicsDbContext db) : ITeachingStore
             .Skip((page - 1) * pageSize).Take(pageSize).ToArrayAsync(token);
         return (items, count);
     }
-    public Task<bool> StudentCodeExistsAsync(Guid centerId, string code, CancellationToken token) =>
-        db.Students.AnyAsync(x => x.CenterId == centerId && x.Code == code, token);
 
     public Task<Teacher?> FindTeacherAsync(Guid centerId, Guid id, CancellationToken token) =>
         db.Teachers.SingleOrDefaultAsync(x => x.CenterId == centerId && x.Id == id, token);
@@ -66,8 +62,6 @@ public sealed class TeachingStore(AcademicsDbContext db) : ITeachingStore
             .Skip((page - 1) * pageSize).Take(pageSize).ToArrayAsync(token);
         return (items, count);
     }
-    public Task<bool> TeacherCodeExistsAsync(Guid centerId, string code, CancellationToken token) =>
-        db.Teachers.AnyAsync(x => x.CenterId == centerId && x.Code == code, token);
     public Task<Teacher?> FindTeacherByUserAsync(Guid centerId, Guid userId, CancellationToken token) =>
         db.Teachers.SingleOrDefaultAsync(x => x.CenterId == centerId && x.UserId == userId, token);
     public async Task<IReadOnlyList<TeachingSession>> ListTeacherSessionsAsync(Guid centerId, Guid teacherId,
@@ -150,25 +144,6 @@ public sealed class TeachingStore(AcademicsDbContext db) : ITeachingStore
                 (filter.TeacherId == null || x.TeacherId == filter.TeacherId) &&
                 (filter.RoomId == null || x.RoomId == filter.RoomId))
             .OrderBy(x => x.StartUtc).ThenBy(x => x.Id).ToArrayAsync(token);
-
-    /// <summary>
-    /// Decision D9: automatic codes are HS-000001, HS-000002… per center. A counter row hands out
-    /// numbers atomically; numbers already taken by hand-typed codes are skipped.
-    /// </summary>
-    public async Task<string> NextStudentCodeAsync(Guid centerId, CancellationToken token)
-    {
-        for (var attempt = 0; attempt < 50; attempt++)
-        {
-            var next = await db.Database.SqlQueryRaw<int>(
-                "INSERT INTO academics.student_code_counters (center_id, last_value) VALUES (@center, 1) " +
-                "ON CONFLICT (center_id) DO UPDATE SET last_value = academics.student_code_counters.last_value + 1 " +
-                "RETURNING last_value AS \"Value\"",
-                new NpgsqlParameter("center", centerId)).ToListAsync(token);
-            var code = StudentCode.Format(next.Single());
-            if (!await db.Students.AnyAsync(x => x.CenterId == centerId && x.Code == code, token)) return code;
-        }
-        throw new InvalidOperationException("Could not allocate a free student code.");
-    }
 
     private static string? Pattern(string? search)
     {

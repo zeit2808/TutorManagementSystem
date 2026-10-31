@@ -1,10 +1,12 @@
 using TutorManagement.Application.Abstractions.Clock;
 using TutorManagement.Modules.Organizations.Application.Centers.Abstractions;
+using TutorManagement.Modules.Organizations.Application.Codes;
 using TutorManagement.Modules.Organizations.Application.Rooms;
 using TutorManagement.Modules.Organizations.Application.Rooms.Abstractions;
 using TutorManagement.Modules.Organizations.Contracts.Centers;
 using TutorManagement.Modules.Organizations.Domain.Rooms;
 using TutorManagement.SharedKernel.Exceptions;
+using TutorManagement.SharedKernel.Primitives;
 
 namespace TutorManagement.IntegrationTests;
 
@@ -13,31 +15,32 @@ public sealed class RoomCatalogTests
     private static readonly Guid Actor = Guid.Parse("f96e0197-bd86-4f53-965b-528b469d1596");
 
     [Fact]
-    public async Task Room_codes_and_names_are_unique_per_center()
+    public async Task Room_codes_are_generated_per_center_and_names_stay_unique()
     {
         var state = new State();
-        var first = await state.Create.HandleAsync(new(state.CenterA, Actor, " a2 ", "  Phòng   A2 ", "Tầng 2"), default);
+        var first = await state.Create.HandleAsync(new(state.CenterA, Actor, "  Phòng   A2 ", "Tầng 2"), default);
         Assert.True(first.IsSuccess);
-        Assert.Equal("A2", first.Value.Code);
+        Assert.Equal("PH-000001", first.Value.Code);
         Assert.Equal("Phòng A2", first.Value.Name);
 
-        Assert.Equal(RoomErrors.CodeAlreadyExists,
-            (await state.Create.HandleAsync(new(state.CenterA, Actor, "A2", "Phòng B", null), default)).Error);
+        Assert.Equal("PH-000002",
+            (await state.Create.HandleAsync(new(state.CenterA, Actor, "Phòng B", null), default)).Value.Code);
         Assert.Equal(RoomErrors.NameAlreadyExists,
-            (await state.Create.HandleAsync(new(state.CenterA, Actor, "B2", "phòng a2", null), default)).Error);
-        Assert.True((await state.Create.HandleAsync(new(state.CenterB, Actor, "A2", "Phòng A2", null), default)).IsSuccess);
-        Assert.Equal(2, state.SaveCount);
+            (await state.Create.HandleAsync(new(state.CenterA, Actor, "phòng a2", null), default)).Error);
+        var otherCenter = await state.Create.HandleAsync(new(state.CenterB, Actor, "Phòng A2", null), default);
+        Assert.Equal("PH-000001", otherCenter.Value.Code);
+        Assert.Equal(3, state.SaveCount);
     }
 
     [Fact]
     public async Task Room_cannot_be_accessed_through_another_center_route()
     {
         var state = new State();
-        var created = await state.Create.HandleAsync(new(state.CenterA, Actor, "A2", "Phòng A2", null), default);
+        var created = await state.Create.HandleAsync(new(state.CenterA, Actor, "Phòng A2", null), default);
         var id = created.Value.Id;
         Assert.Equal(RoomErrors.NotFound, (await state.Get.HandleAsync(new(state.CenterB, id), default)).Error);
         Assert.Equal(RoomErrors.NotFound,
-            (await state.Update.HandleAsync(new(state.CenterB, id, Actor, 0, "A3", "Phòng A3", null), default)).Error);
+            (await state.Update.HandleAsync(new(state.CenterB, id, Actor, 0, "Phòng A3", null), default)).Error);
         Assert.Equal(RoomErrors.NotFound,
             (await state.Archive.HandleAsync(new(state.CenterB, id, Actor, 0), default)).Error);
         Assert.Empty((await state.List.HandleAsync(new(state.CenterB, true), default)).Value);
@@ -47,7 +50,7 @@ public sealed class RoomCatalogTests
     public async Task Archive_retains_room_and_history_and_reactivation_requires_current_version()
     {
         var state = new State();
-        var created = await state.Create.HandleAsync(new(state.CenterA, Actor, "A2", "Phòng A2", null), default);
+        var created = await state.Create.HandleAsync(new(state.CenterA, Actor, "Phòng A2", null), default);
         var id = created.Value.Id;
         var archived = await state.Archive.HandleAsync(new(state.CenterA, id, Actor, 0), default);
         Assert.True(archived.IsSuccess);
@@ -59,9 +62,10 @@ public sealed class RoomCatalogTests
         Assert.Equal(RoomErrors.ConcurrentChange,
             (await state.Reactivate.HandleAsync(new(state.CenterA, id, Actor, 0), default)).Error);
         Assert.Equal(RoomErrors.ArchivedCannotEdit,
-            (await state.Update.HandleAsync(new(state.CenterA, id, Actor, 1, "A2", "Phòng A2", null), default)).Error);
-        Assert.Equal(RoomErrors.CodeAlreadyExists,
-            (await state.Create.HandleAsync(new(state.CenterA, Actor, "A2", "Phòng B", null), default)).Error);
+            (await state.Update.HandleAsync(new(state.CenterA, id, Actor, 1, "Phòng A2", null), default)).Error);
+        // An archived room still owns its name.
+        Assert.Equal(RoomErrors.NameAlreadyExists,
+            (await state.Create.HandleAsync(new(state.CenterA, Actor, "Phòng A2", null), default)).Error);
 
         var restored = await state.Reactivate.HandleAsync(new(state.CenterA, id, Actor, 1), default);
         Assert.True(restored.IsSuccess);
@@ -73,20 +77,20 @@ public sealed class RoomCatalogTests
     public async Task Mutations_require_approved_center_and_stale_writes_conflict()
     {
         var state = new State();
-        var created = await state.Create.HandleAsync(new(state.CenterA, Actor, "A2", "Phòng A2", null), default);
+        var created = await state.Create.HandleAsync(new(state.CenterA, Actor, "Phòng A2", null), default);
         var unchanged = await state.Update.HandleAsync(new(state.CenterA, created.Value.Id, Actor,
-            0, "a2", " Phòng A2 ", null), default);
+            0, " Phòng A2 ", null), default);
         Assert.True(unchanged.IsSuccess);
         Assert.Equal(1, state.SaveCount);
 
         state.FailNextSave = true;
         var conflict = await state.Update.HandleAsync(new(state.CenterA, created.Value.Id, Actor,
-            0, "A2", "Phòng A2", "Tầng 3"), default);
+            0, "Phòng A2", "Tầng 3"), default);
         Assert.Equal(RoomErrors.ConcurrentChange, conflict.Error);
 
         state.CenterAIsApproved = false;
         Assert.Equal(RoomErrors.CenterNotReady,
-            (await state.Create.HandleAsync(new(state.CenterA, Actor, "B2", "Phòng B2", null), default)).Error);
+            (await state.Create.HandleAsync(new(state.CenterA, Actor, "Phòng B2", null), default)).Error);
         Assert.Equal(RoomErrors.CenterNotReady,
             (await state.Archive.HandleAsync(new(state.CenterA, created.Value.Id, Actor, 1), default)).Error);
     }
@@ -101,17 +105,18 @@ public sealed class RoomCatalogTests
             Actor, DateTimeOffset.UtcNow));
     }
 
-    private sealed class State : IOrganizationCenterReader, IRoomRepository, IRoomArchiveGuard,
+    private sealed class State : IOrganizationCenterReader, IRoomRepository, IOrganizationCodeGenerator, IRoomArchiveGuard,
         IRoomArchiveTransaction, IOrganizationUnitOfWork, IClock
     {
         private readonly List<Room> _rooms = [];
+        private readonly Dictionary<(Guid, string), long> _counters = [];
         public DateTimeOffset UtcNow { get; } = new(2026, 10, 19, 0, 0, 0, TimeSpan.Zero);
         public Guid CenterA { get; } = Guid.NewGuid();
         public Guid CenterB { get; } = Guid.NewGuid();
         public bool CenterAIsApproved { get; set; } = true;
         public int SaveCount { get; private set; }
         public bool FailNextSave { get; set; }
-        public CreateRoomCommandHandler Create => new(this, this, this, this);
+        public CreateRoomCommandHandler Create => new(this, this, this, this, this);
         public UpdateRoomCommandHandler Update => new(this, this, this, this);
         public ArchiveRoomCommandHandler Archive => new(this, this, this, this, this);
         public ReactivateRoomCommandHandler Reactivate => new(this, this, this, this);
@@ -135,9 +140,12 @@ public sealed class RoomCatalogTests
             Task.FromResult<IReadOnlyList<Room>>(_rooms
                 .Where(room => room.CenterId == centerId && (includeArchived || room.IsActive)).ToArray());
 
-        public Task<bool> CodeExistsAsync(Guid centerId, string normalizedCode, Guid? excludingId,
-            CancellationToken cancellationToken) => Task.FromResult(_rooms.Any(room => room.CenterId == centerId &&
-                room.NormalizedCode == normalizedCode && room.Id != excludingId));
+        public Task<string> NextAsync(Guid centerId, CodeKind kind, CancellationToken token)
+        {
+            var next = _counters.GetValueOrDefault((centerId, kind.Prefix)) + 1;
+            _counters[(centerId, kind.Prefix)] = next;
+            return Task.FromResult(EntityCode.Format(kind, next));
+        }
 
         public Task<bool> NameExistsAsync(Guid centerId, string normalizedName, Guid? excludingId,
             CancellationToken cancellationToken) => Task.FromResult(_rooms.Any(room => room.CenterId == centerId &&
