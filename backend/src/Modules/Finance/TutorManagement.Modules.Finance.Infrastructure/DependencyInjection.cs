@@ -13,6 +13,7 @@ public static class DependencyInjection
     {
         services.AddFinanceReminders(connectionString);
         services.AddScoped<TuitionWorkflow>();
+        services.AddScoped<PaymentIntentWorkflow>();
         services.AddScoped<StudentTuitionQuery>();
         services.AddScoped<IPayrollStore, PayrollStore>();
         services.AddScoped<IPayrollAcademicsReader, PayrollAcademicsReader>();

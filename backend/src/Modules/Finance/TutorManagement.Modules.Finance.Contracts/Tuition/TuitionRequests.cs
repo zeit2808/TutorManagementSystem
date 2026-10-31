@@ -10,6 +10,9 @@ public sealed record SetClassFeeRequest(long MonthlyFee);
 public sealed record RecordPaymentRequest(long Amount, string Method, DateOnly? ReceivedOn = null, string? PayerName = null,
     string? Note = null, IReadOnlyList<Guid>? ChargeIds = null, Guid? RequestId = null);
 
+/// <summary>The QR code covers these open charges, or every open charge when empty. The amount comes from the ledger.</summary>
+public sealed record CreatePaymentIntentRequest(IReadOnlyList<Guid>? ChargeIds = null);
+
 public sealed record VoidReceiptRequest(string Reason);
 
 /// <summary>Kind: Percent (value 1–100) or Amount (VND). Applies to cycles starting between fromDate and toDate.</summary>

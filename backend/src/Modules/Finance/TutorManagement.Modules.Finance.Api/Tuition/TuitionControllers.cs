@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TutorManagement.Modules.Finance.Application.Tuition;
 using TutorManagement.Modules.Finance.Contracts.Tuition;
 using TutorManagement.Modules.IdentityAccess.Contracts.Authorization;
@@ -43,6 +44,10 @@ public abstract class TuitionControllerBase : ControllerBase
 
     protected IActionResult Done<T>(Result<T> result) =>
         result.IsSuccess ? Ok(HttpContext.ToApiResponse(result.Value)) : Failure(result.Error);
+
+    protected IActionResult Created(Result<PaymentIntentDto> result) => result.IsSuccess
+        ? StatusCode(StatusCodes.Status201Created, HttpContext.ToApiResponse(result.Value, "Payment QR ready."))
+        : Failure(result.Error);
 }
 
 /// <summary>Tuition for the center (docs/HOC-PHI.md). Owner, manager and staff; teachers get 403.</summary>
@@ -53,7 +58,7 @@ public abstract class TuitionControllerBase : ControllerBase
 [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status404NotFound)]
 [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status409Conflict)]
 [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status422UnprocessableEntity)]
-public sealed class TuitionController(TuitionWorkflow workflow) : TuitionControllerBase
+public sealed class TuitionController(TuitionWorkflow workflow, PaymentIntentWorkflow intents) : TuitionControllerBase
 {
     private static readonly string[] ChargeStatuses = ["All", "Open", "Overdue", "Paid", "Missed"];
 
@@ -125,6 +130,18 @@ public sealed class TuitionController(TuitionWorkflow workflow) : TuitionControl
             : Failure(result.Error);
     }
 
+    /// <summary>The QR code for the student's open charges, amount and transfer content filled in.</summary>
+    [Authorize(Policy = CenterAccessPolicyNames.Member), EnableRateLimiting("payment-intent"),
+     HttpPost("students/{studentId:guid}/payment-intents"), Consumes("application/json")]
+    [ProducesResponseType<ApiResponse<PaymentIntentDto>>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> CreatePaymentIntent(Guid centerId, Guid studentId,
+        [FromBody] CreatePaymentIntentRequest request, CancellationToken token)
+    {
+        if (IsTeacher()) return Forbidden();
+        if (!TryGetActor(out var actor)) return InvalidIdentity();
+        return Created(await intents.CreateForCenterAsync(centerId, studentId, request.ChargeIds, actor, token));
+    }
+
     [Authorize(Policy = CenterAccessPolicyNames.Member), HttpGet("receipts")]
     [ProducesResponseType<ApiResponse<TuitionPage<ReceiptDto>>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Receipts(Guid centerId, [FromQuery] DateOnly? from = null, [FromQuery] DateOnly? to = null,
@@ -193,7 +210,11 @@ public sealed class TuitionController(TuitionWorkflow workflow) : TuitionControl
 [ApiController, ApiVersion(1.0), Tags("16 · Tuition")]
 [Route("api/v{version:apiVersion}/me/tuition")]
 [Authorize(Roles = "Student")]
-public sealed class MyTuitionController(StudentTuitionQuery query) : TuitionControllerBase
+[ProducesResponseType<ApiResponse<object>>(StatusCodes.Status400BadRequest)]
+[ProducesResponseType<ApiResponse<object>>(StatusCodes.Status404NotFound)]
+[ProducesResponseType<ApiResponse<object>>(StatusCodes.Status409Conflict)]
+[ProducesResponseType<ApiResponse<object>>(StatusCodes.Status422UnprocessableEntity)]
+public sealed class MyTuitionController(StudentTuitionQuery query, PaymentIntentWorkflow intents) : TuitionControllerBase
 {
     [HttpGet]
     [ProducesResponseType<ApiResponse<MyTuitionDto>>(StatusCodes.Status200OK)]
@@ -201,5 +222,15 @@ public sealed class MyTuitionController(StudentTuitionQuery query) : TuitionCont
     {
         if (!TryGetActor(out var userId)) return InvalidIdentity();
         return Ok(HttpContext.ToApiResponse(await query.ListAsync(userId, token)));
+    }
+
+    /// <summary>The QR code for the student's own charges; studentId is a profile from <c>GET me/tuition</c>.</summary>
+    [EnableRateLimiting("payment-intent"), HttpPost("students/{studentId:guid}/payment-intents"), Consumes("application/json")]
+    [ProducesResponseType<ApiResponse<PaymentIntentDto>>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> CreatePaymentIntent(Guid studentId, [FromBody] CreatePaymentIntentRequest request,
+        CancellationToken token)
+    {
+        if (!TryGetActor(out var userId)) return InvalidIdentity();
+        return Created(await intents.CreateForStudentAsync(userId, studentId, request.ChargeIds, token));
     }
 }

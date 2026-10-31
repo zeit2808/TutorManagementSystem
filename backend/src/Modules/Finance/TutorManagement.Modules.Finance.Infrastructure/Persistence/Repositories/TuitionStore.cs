@@ -58,6 +58,11 @@ public sealed class TuitionStore(FinanceDbContext db, IClock clock, IServiceProv
     public async Task<IReadOnlyList<Guid>> ListCentersWithFeesAsync(CancellationToken token) =>
         await db.ClassFees.AsNoTracking().Select(x => x.CenterId).Distinct().ToArrayAsync(token);
 
+    public async Task<IReadOnlyList<PaymentIntent>> ListPendingPaymentIntentsAsync(Guid centerId, Guid studentId,
+        CancellationToken token) =>
+        await db.PaymentIntents.Where(x => x.CenterId == centerId && x.StudentId == studentId &&
+            x.Status == PaymentIntentStatus.Pending).ToArrayAsync(token);
+
     public async Task AddAsync<T>(T entity, CancellationToken token) where T : class => await db.AddAsync(entity, token);
 
     public async Task SaveAsync(CancellationToken token)

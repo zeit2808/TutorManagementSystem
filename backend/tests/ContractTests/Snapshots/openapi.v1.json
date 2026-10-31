@@ -4272,6 +4272,51 @@
         },
         "type": "object"
       },
+      "TutorManagement_Modules_Finance_Application_Tuition_PaymentIntentDto": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "bank": {
+            "$ref": "#/components/schemas/TutorManagement_Modules_Finance_Application_Tuition_BankAccountDto"
+          },
+          "chargeIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "code": {
+            "nullable": true,
+            "type": "string"
+          },
+          "expiresAtUtc": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "qrPayload": {
+            "nullable": true,
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "transferContent": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "TutorManagement_Modules_Finance_Application_Tuition_ReceiptDto": {
         "additionalProperties": false,
         "properties": {
@@ -4801,6 +4846,20 @@
             "format": "int32",
             "nullable": true,
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "TutorManagement_Modules_Finance_Contracts_Tuition_CreatePaymentIntentRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "chargeIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
           }
         },
         "type": "object"
@@ -7909,6 +7968,33 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/TutorManagement_Modules_Finance_Application_Tuition_MyTuitionDto"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiError"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "message": {
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "traceId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Tuition_PaymentIntentDto": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TutorManagement_Modules_Finance_Application_Tuition_PaymentIntentDto"
           },
           "errors": {
             "items": {
@@ -19071,6 +19157,134 @@
         ]
       }
     },
+    "/api/v1/centers/{centerId}/students/{studentId}/payment-intents": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "centerId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TutorManagement_Modules_Finance_Contracts_Tuition_CreatePaymentIntentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Tuition_PaymentIntentDto"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Tuition_PaymentIntentDto"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "tags": [
+          "16 \u00B7 Tuition"
+        ]
+      }
+    },
     "/api/v1/centers/{centerId}/students/{studentId}/reactivate": {
       "post": {
         "parameters": [
@@ -22278,6 +22492,170 @@
               }
             },
             "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "tags": [
+          "16 \u00B7 Tuition"
+        ]
+      }
+    },
+    "/api/v1/me/tuition/students/{studentId}/payment-intents": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TutorManagement_Modules_Finance_Contracts_Tuition_CreatePaymentIntentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Tuition_PaymentIntentDto"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Tuition_PaymentIntentDto"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
           }
         },
         "tags": [

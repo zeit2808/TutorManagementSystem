@@ -158,6 +158,20 @@ public sealed class StudentTuitionDto
     public List<DiscountDto> Discounts { get; set; } = [];
 }
 
+/// <summary>A QR code ready to show: <c>qrPayload</c> is the EMVCo text the client draws as the code.</summary>
+public sealed class PaymentIntentDto
+{
+    public Guid Id { get; set; }
+    public Guid StudentId { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public long Amount { get; set; }
+    public string TransferContent { get; set; } = string.Empty;
+    public string QrPayload { get; set; } = string.Empty;
+    public BankAccountDto Bank { get; set; } = new();
+    public List<Guid> ChargeIds { get; set; } = [];
+    public DateTimeOffset ExpiresAtUtc { get; set; }
+}
+
 public sealed class ClassFeeHistoryDto
 {
     public long MonthlyFee { get; set; }
