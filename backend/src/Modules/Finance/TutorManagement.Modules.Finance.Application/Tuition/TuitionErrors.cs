@@ -28,6 +28,9 @@ public static class TuitionErrors
     public static readonly Error StudentUnavailable = new("tuition_student_merged",
         "The profile was merged into another one; record money on the kept profile.");
     public static readonly Error NotEnrolled = new("tuition_not_enrolled", "The student has never been in this class.");
+    public static readonly Error BankNotConfigured = new("tuition_bank_not_configured",
+        "The center has not set up a bank account for transfers.");
+    public static readonly Error NothingToPay = new("tuition_nothing_to_pay", "The student has no open charges.");
     public static readonly Error AlreadyVoided = new("receipt_already_voided", "The receipt is already void.");
     public static readonly Error ConcurrentChange = new("tuition_concurrent_change",
         "Tuition data was changed by another request. Reload and try again.");

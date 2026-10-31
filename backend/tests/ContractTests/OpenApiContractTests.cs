@@ -23,7 +23,7 @@ public sealed class OpenApiContractTests(OpenApiContractTests.Factory factory) :
     {
         var current = await LoadDocumentAsync();
         var path = SnapshotPath();
-        var normalized = current.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n";
+        var normalized = current.ToJsonString(new JsonSerializerOptions { WriteIndented = true }).ReplaceLineEndings("\n") + "\n";
 
         if (Environment.GetEnvironmentVariable("TM_UPDATE_CONTRACT_SNAPSHOT") == "1")
         {

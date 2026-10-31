@@ -16,7 +16,7 @@ Liên quan: `REVIEW-NGHIEP-VU-BACKEND.md` mục 6.4; lương giáo viên làm đ
 | H7 | Vào / rời giữa chừng | **Vào giữa kỳ: tính theo % số buổi** — kỳ đầu = học phí × (số buổi từ buổi đầu em học đến hết kỳ ÷ số buổi của cả kỳ), làm tròn 1.000đ; từ kỳ sau đóng đủ. Số buổi chỉ đếm buổi không bị huỷ / không diễn ra, chốt lúc lập khoản thu. **Rời giữa kỳ:** **tròn tiền** — tháng học trọn phải đóng; kỳ dở dang đã đóng bao nhiêu giữ bấy nhiêu, **không hoàn**, chưa đóng thì **không thu**, chỉ ghi chú "(kỳ n: đã học x/y buổi ≈ z đ — không thu)" |
 | H8 | Miễn giảm | Giảm **%** hoặc **số tiền cố định** cho một em ở một lớp, có ngày hiệu lực, **bắt buộc lý do**; chỉ chủ/quản lý |
 | H9 | Tính tiền khi nào | Mỗi kỳ một khoản cố định, lập ngay khi kỳ bắt đầu. Không cộng trừ sang kỳ sau vì buổi nghỉ. Tiền chưa đóng vẫn là nợ của kỳ đó. Không có khoá sổ |
-| H10 | Hình thức thu | Tiền mặt, chuyển khoản; hiện **mã VietQR** theo tài khoản trung tâm. Không đối soát ngân hàng tự động |
+| H10 | Hình thức thu | Tiền mặt, chuyển khoản; **mã VietQR điền sẵn số tiền và nội dung**, mỗi lần đóng một mã (chốt 31/10, thay cho QR chỉ có tài khoản). Tự đối soát ngân hàng qua SePay đang triển khai theo `THANH-TOAN-QR-KE-HOACH.md`; khi chưa bật thì vẫn ghi biên lai tay |
 | H11 | Đóng một phần / đóng trước / gộp | Cho phép cả ba. Tiền thừa thành **số dư**, tự trừ vào kỳ sau. Một biên lai trả nhiều kỳ, nhiều lớp |
 | H12 | Biên lai | Số liên tục theo trung tâm (`PT-000001`), in / lưu PDF; **huỷ có lý do, không xoá** |
 | H13 | Quyền | Chủ, Quản lý, Nhân viên: xem và thu tiền. Chỉ Chủ, Quản lý: đặt học phí, miễn giảm, huỷ biên lai, cài đặt. Giáo viên không thấy học phí |
@@ -63,5 +63,7 @@ Số dư (đóng trước) còn lại khi em nghỉ vẫn nằm trên hồ sơ; 
 | `POST centers/{c}/students/{id}/discounts` · `POST centers/{c}/discounts/{id}/revoke` | Chủ, quản lý | `{classId, kind, value, fromDate, toDate?, reason}` |
 | `GET/PUT centers/{c}/tuition/settings` | Xem: 3 vai trò · Sửa: chủ, quản lý | Ngân hàng, hạn đóng, email nhắc, `expectedVersion` |
 | `GET me/tuition` | Học sinh | Mọi trung tâm, chỉ xem |
+| `POST centers/{c}/students/{id}/payment-intents` | 3 vai trò | `{chargeIds?}`, bỏ trống = mọi khoản còn nợ. Trả `{code, amount, transferContent, qrPayload, bank, chargeIds, expiresAtUtc}`; `qrPayload` là chuỗi EMVCo để client vẽ mã |
+| `POST me/tuition/students/{id}/payment-intents` | Học sinh | Như trên, chỉ hồ sơ của mình |
 
-Migration: `Finance/20261023112910_InitialTuition` (schema `finance`: `class_fees`, `class_billing_anchors`, `tuition_charges`, `tuition_discounts`, `receipts`, `receipt_allocations`, `receipt_counters`, `finance_settings`).
+Migration: `Finance/20261023112910_InitialTuition` (schema `finance`: `class_fees`, `class_billing_anchors`, `tuition_charges`, `tuition_discounts`, `receipts`, `receipt_allocations`, `receipt_counters`, `finance_settings`); `Finance/20261031163956_PaymentIntents` (`payment_intents`).

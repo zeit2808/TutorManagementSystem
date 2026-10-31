@@ -678,6 +678,92 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Tuition.PaymentIntent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("account_name");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("account_number");
+
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("BankBin")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("bank_bin");
+
+                    b.Property<DateTimeOffset?>("CancelledAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at_utc");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("center_id");
+
+                    b.PrimitiveCollection<Guid[]>("ChargeIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("charge_ids");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(11)
+                        .HasColumnType("character varying(11)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("student_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_intents_code");
+
+                    b.HasIndex("CenterId", "StudentId")
+                        .HasDatabaseName("ix_payment_intents_pending")
+                        .HasFilter("status = 'Pending'");
+
+                    b.ToTable("payment_intents", "finance", t =>
+                        {
+                            t.HasCheckConstraint("ck_payment_intents_amount", "amount > 0");
+                        });
+                });
+
             modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Tuition.Receipt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -774,7 +860,6 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Tuition.ReceiptAllocation", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 

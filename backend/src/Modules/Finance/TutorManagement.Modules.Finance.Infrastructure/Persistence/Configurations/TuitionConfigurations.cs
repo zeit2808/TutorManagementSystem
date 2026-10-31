@@ -141,6 +141,34 @@ public sealed class ReceiptConfiguration : IEntityTypeConfiguration<Receipt>
     }
 }
 
+public sealed class PaymentIntentConfiguration : IEntityTypeConfiguration<PaymentIntent>
+{
+    public void Configure(EntityTypeBuilder<PaymentIntent> builder)
+    {
+        builder.ToTable("payment_intents", t => t.HasCheckConstraint("ck_payment_intents_amount", "amount > 0"));
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasColumnName("id");
+        builder.Property(x => x.CenterId).HasColumnName("center_id");
+        builder.Property(x => x.StudentId).HasColumnName("student_id");
+        builder.Property(x => x.Code).HasColumnName("code").HasMaxLength(PaymentCode.Length);
+        builder.Property(x => x.Amount).HasColumnName("amount");
+        builder.Property(x => x.ChargeIds).HasColumnName("charge_ids");
+        builder.Property(x => x.BankBin).HasColumnName("bank_bin").HasMaxLength(6);
+        builder.Property(x => x.AccountNumber).HasColumnName("account_number").HasMaxLength(20);
+        builder.Property(x => x.AccountName).HasColumnName("account_name").HasMaxLength(100);
+        builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(16);
+        builder.Property(x => x.ExpiresAtUtc).HasColumnName("expires_at_utc");
+        builder.Property(x => x.CancelledAtUtc).HasColumnName("cancelled_at_utc");
+        builder.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id");
+        builder.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc");
+        builder.Ignore(x => x.TransferContent);
+        builder.Ignore(x => x.QrPayload);
+        builder.HasIndex(x => x.Code).IsUnique().HasDatabaseName("ux_payment_intents_code");
+        builder.HasIndex(x => new { x.CenterId, x.StudentId }).HasFilter("status = 'Pending'")
+            .HasDatabaseName("ix_payment_intents_pending");
+    }
+}
+
 public sealed class ReceiptAllocationConfiguration : IEntityTypeConfiguration<ReceiptAllocation>
 {
     public void Configure(EntityTypeBuilder<ReceiptAllocation> builder)

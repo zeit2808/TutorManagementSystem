@@ -15,6 +15,7 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
     public DbSet<Receipt> Receipts => Set<Receipt>();
     public DbSet<ReceiptAllocation> ReceiptAllocations => Set<ReceiptAllocation>();
     public DbSet<FinanceSettings> FinanceSettings => Set<FinanceSettings>();
+    public DbSet<PaymentIntent> PaymentIntents => Set<PaymentIntent>();
     public DbSet<PayrollConfig> PayrollConfigs => Set<PayrollConfig>();
     public DbSet<PayrollConfigChange> PayrollConfigChanges => Set<PayrollConfigChange>();
     public DbSet<PayRate> PayRates => Set<PayRate>();

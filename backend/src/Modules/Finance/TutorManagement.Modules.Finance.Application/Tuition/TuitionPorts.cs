@@ -73,6 +73,8 @@ public interface ITuitionStore
     Task<FinanceSettings?> FindSettingsAsync(Guid centerId, CancellationToken token);
     Task<int> NextReceiptNumberAsync(Guid centerId, CancellationToken token);
     Task<IReadOnlyList<Guid>> ListCentersWithFeesAsync(CancellationToken token);
+    /// <summary>Tracked: the student's QR codes that have not been cancelled.</summary>
+    Task<IReadOnlyList<PaymentIntent>> ListPendingPaymentIntentsAsync(Guid centerId, Guid studentId, CancellationToken token);
 
     Task AddAsync<T>(T entity, CancellationToken token) where T : class;
     Task SaveAsync(CancellationToken token);
