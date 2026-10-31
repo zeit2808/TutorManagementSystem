@@ -566,6 +566,7 @@ public sealed class PayrollWorkflow(
         bool Mine(Guid teacherId) => only is null || only == teacherId;
         string TeacherName(Guid id) => book.Teachers.GetValueOrDefault(id)?.FullName ?? "—";
         string ClassCode(Guid id) => book.Classes.GetValueOrDefault(id)?.Code ?? "—";
+        string ClassName(Guid id) => book.Classes.GetValueOrDefault(id)?.Name ?? "—";
 
         var adjustments = book.Adjustments.Where(x => x.Month == month && Mine(x.TeacherId)).ToArray();
         var expenses = only is null ? book.Expenses.Where(x => x.Month == month).ToArray() : [];
@@ -595,8 +596,8 @@ public sealed class PayrollWorkflow(
                     ClassId = c.ClassId, ClassCode = ClassCode(c.ClassId),
                     ClassName = book.Classes.GetValueOrDefault(c.ClassId)?.Name ?? "—",
                     Sessions = c.Sessions, Minutes = c.Minutes, Amount = (long)Math.Round(c.Amount, MidpointRounding.AwayFromZero)
-                }).OrderBy(c => c.ClassCode, StringComparer.CurrentCultureIgnoreCase).ToList(),
-                Items = earned is null ? [] : earned.Items.OrderBy(i => i.StartUtc).Select(i => Item(i, ClassCode)).ToList(),
+                }).OrderBy(c => c.ClassName, StringComparer.CurrentCultureIgnoreCase).ToList(),
+                Items = earned is null ? [] : earned.Items.OrderBy(i => i.StartUtc).Select(i => Item(i, ClassCode, ClassName)).ToList(),
                 CarriedFrom = carried.Where(c => c.TeacherId == line.TeacherId).GroupBy(c => c.From)
                     .Select(g => new PayrollCarriedDto { FromMonth = PayMonth.Format(g.Key), Amount = g.Sum(c => c.Amount) }).ToList()
             };
@@ -618,7 +619,7 @@ public sealed class PayrollWorkflow(
                 UnassignedItems = figures.Unassigned.GroupBy(x => (x.ClassId, x.PeriodStart, x.PeriodEnd))
                     .Select(g => new PayrollUnassignedDto
                     {
-                        ClassId = g.Key.ClassId, ClassCode = ClassCode(g.Key.ClassId), PeriodStart = g.Key.PeriodStart,
+                        ClassId = g.Key.ClassId, ClassCode = ClassCode(g.Key.ClassId), ClassName = ClassName(g.Key.ClassId), PeriodStart = g.Key.PeriodStart,
                         PeriodEnd = g.Key.PeriodEnd, Amount = g.Sum(x => x.Amount)
                     }).ToList()
             },
@@ -651,11 +652,11 @@ public sealed class PayrollWorkflow(
             Unsubmitted = closed is not null ? [] : figures.Unsubmitted
                 .Where(x => Mine(x.TeacherId)).OrderBy(x => x.StartUtc).Select(x => new PayrollUnsubmittedDto
                 {
-                    SessionId = x.Id, ClassCode = ClassCode(x.ClassId), StartUtc = x.StartUtc, TeacherName = TeacherName(x.TeacherId)
+                    SessionId = x.Id, ClassCode = ClassCode(x.ClassId), ClassName = ClassName(x.ClassId), StartUtc = x.StartUtc, TeacherName = TeacherName(x.TeacherId)
                 }).ToList(),
             MissingRates = closed is not null ? [] : figures.MissingRates
                 .Where(x => only is null || figures.Teachers.GetValueOrDefault(only.Value)?.Items.Contains(x) == true)
-                .Select(x => Item(x, ClassCode)).ToList(),
+                .Select(x => Item(x, ClassCode, ClassName)).ToList(),
             Events = events.OrderByDescending(x => x.CreatedAtUtc).Select(x => new PayrollEventDto
             {
                 Kind = x.Kind.ToString(), Reason = x.Reason, ActorName = names.GetValueOrDefault(x.ActorUserId),
@@ -664,9 +665,11 @@ public sealed class PayrollWorkflow(
         };
     }
 
-    private static PayrollSessionItemDto Item(SessionFigure item, Func<Guid, string> classCode) => new()
+    private static PayrollSessionItemDto Item(SessionFigure item, Func<Guid, string> classCode,
+        Func<Guid, string> className) => new()
     {
-        SessionId = item.SessionId, ClassId = item.ClassId, ClassCode = classCode(item.ClassId), StartUtc = item.StartUtc,
+        SessionId = item.SessionId, ClassId = item.ClassId, ClassCode = classCode(item.ClassId),
+        ClassName = className(item.ClassId), StartUtc = item.StartUtc,
         Minutes = item.Minutes, Amount = item.Amount, Substitute = item.Substitute
     };
 
@@ -675,6 +678,7 @@ public sealed class PayrollWorkflow(
     {
         Id = rate.Id, TeacherId = rate.TeacherId, TeacherName = teachers.GetValueOrDefault(rate.TeacherId)?.FullName ?? "—",
         ClassId = rate.ClassId, ClassCode = rate.ClassId is { } c ? classes.GetValueOrDefault(c)?.Code : null,
+        ClassName = rate.ClassId is { } n ? classes.GetValueOrDefault(n)?.Name : null,
         Amount = rate.Amount, EffectiveFrom = rate.EffectiveFrom, CreatedByName = names.GetValueOrDefault(rate.CreatedByUserId),
         CreatedAtUtc = rate.CreatedAtUtc, VoidedAtUtc = rate.VoidedAtUtc, VoidReason = rate.VoidReason
     };

@@ -11,6 +11,7 @@ using TutorManagement.Modules.Academics.Domain.Subjects;
 using TutorManagement.Modules.Academics.Domain.Teaching;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence.Repositories;
+using TutorManagement.Modules.Academics.Infrastructure.Persistence.Codes;
 using TutorManagement.Modules.IdentityAccess.Domain.Authentication;
 using TutorManagement.Modules.IdentityAccess.Infrastructure.Persistence;
 using TutorManagement.Modules.Organizations.Domain.Centers;
@@ -183,14 +184,14 @@ public sealed class RealPostgresPersonalScheduleTests
             Guid applicationId;
             await using (var db = new AcademicsDbContext(academicOptions))
             {
-                var registration = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db), clock);
+                var registration = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db), new AcademicsCodeGenerator(db), clock);
                 var submitted = await registration.SubmitAsync(centerA.Id, studentUser.Id, "Lê Minh", "Lê Bố", "0912345678",
                     [a2.Id], Guid.NewGuid().ToString(), default);
                 applicationId = Assert.Single(submitted.Value.Items).Id;
             }
             await using (var db = new AcademicsDbContext(academicOptions))
             {
-                var registration = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db), clock,
+                var registration = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db), new AcademicsCodeGenerator(db), clock,
                     null, null, Checker(db));
                 var (refused, check) = await registration.ApproveAsync(centerA.Id, applicationId, owner.Id, false, default);
                 Assert.Equal(TeachingErrors.StudentScheduleConflict, refused.Error);
@@ -201,7 +202,7 @@ public sealed class RealPostgresPersonalScheduleTests
             }
             await using (var db = new AcademicsDbContext(academicOptions))
             {
-                var registration = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db), clock,
+                var registration = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db), new AcademicsCodeGenerator(db), clock,
                     null, null, Checker(db));
                 var (approved, _) = await registration.ApproveAsync(centerA.Id, applicationId, owner.Id, true, default);
                 Assert.True(approved.IsSuccess);
@@ -417,7 +418,7 @@ public sealed class RealPostgresPersonalScheduleTests
                 DELETE FROM academics.schedule_series WHERE center_id IN (@a, @b);
                 DELETE FROM academics.classes WHERE center_id IN (@a, @b);
                 DELETE FROM academics.students WHERE center_id IN (@a, @b);
-                DELETE FROM academics.student_code_counters WHERE center_id IN (@a, @b);
+                DELETE FROM academics.code_counters WHERE center_id IN (@a, @b);
                 DELETE FROM academics.teachers WHERE center_id IN (@a, @b);
                 DELETE FROM academics.subjects WHERE center_id IN (@a, @b);
                 DELETE FROM organization.rooms WHERE center_id IN (@a, @b);

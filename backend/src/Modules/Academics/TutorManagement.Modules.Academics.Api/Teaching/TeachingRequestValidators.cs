@@ -9,7 +9,6 @@ public sealed class CreateClassRequestValidator : AbstractValidator<CreateClassR
     public CreateClassRequestValidator()
     {
         RuleFor(x => x.SubjectId).NotEmpty();
-        RuleFor(x => x.Code).Must(TeachingClass.IsValidCode);
         RuleFor(x => x.Name).Must(TeachingClass.IsValidName);
         RuleFor(x => x.MaxStudents).InclusiveBetween(1, 500);
     }
@@ -29,8 +28,6 @@ public sealed class CreateStudentRequestValidator : AbstractValidator<CreateStud
 {
     public CreateStudentRequestValidator()
     {
-        RuleFor(x => x.Code).Must(code => string.IsNullOrWhiteSpace(code) || TeachingClass.IsValidCode(code))
-            .WithMessage("Code must be 2–20 letters, digits, '-' or '_', or empty to generate one.");
         RuleFor(x => x.FullName).Must(TeachingClass.IsValidName);
         RuleFor(x => x.ParentName).Must(ParentContact.IsValidName).WithMessage("Parent name must contain 2–100 characters.");
         RuleFor(x => x.ParentPhone).Must(phone => ParentContact.TryNormalizePhone(phone, out _))
@@ -54,7 +51,6 @@ public sealed class CreateTeacherRequestValidator : AbstractValidator<CreateTeac
 {
     public CreateTeacherRequestValidator()
     {
-        RuleFor(x => x.Code).Must(TeachingClass.IsValidCode);
         RuleFor(x => x.FullName).Must(TeachingClass.IsValidName);
     }
 }

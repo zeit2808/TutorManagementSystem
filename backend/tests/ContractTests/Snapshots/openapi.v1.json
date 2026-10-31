@@ -2242,10 +2242,6 @@
       "TutorManagement_Modules_Academics_Contracts_Subjects_CreateSubjectRequest": {
         "additionalProperties": false,
         "properties": {
-          "code": {
-            "nullable": true,
-            "type": "string"
-          },
           "description": {
             "nullable": true,
             "type": "string"
@@ -2271,10 +2267,6 @@
       "TutorManagement_Modules_Academics_Contracts_Subjects_UpdateSubjectRequest": {
         "additionalProperties": false,
         "properties": {
-          "code": {
-            "nullable": true,
-            "type": "string"
-          },
           "description": {
             "nullable": true,
             "type": "string"
@@ -2400,10 +2392,6 @@
       "TutorManagement_Modules_Academics_Contracts_Teaching_CreateClassRequest": {
         "additionalProperties": false,
         "properties": {
-          "code": {
-            "nullable": true,
-            "type": "string"
-          },
           "maxStudents": {
             "format": "int32",
             "type": "integer"
@@ -2510,10 +2498,6 @@
       "TutorManagement_Modules_Academics_Contracts_Teaching_CreateStudentRequest": {
         "additionalProperties": false,
         "properties": {
-          "code": {
-            "nullable": true,
-            "type": "string"
-          },
           "fullName": {
             "nullable": true,
             "type": "string"
@@ -2532,10 +2516,6 @@
       "TutorManagement_Modules_Academics_Contracts_Teaching_CreateTeacherRequest": {
         "additionalProperties": false,
         "properties": {
-          "code": {
-            "nullable": true,
-            "type": "string"
-          },
           "fullName": {
             "nullable": true,
             "type": "string"
@@ -3088,6 +3068,10 @@
           },
           "classId": {
             "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "className": {
             "nullable": true,
             "type": "string"
           },
@@ -3749,6 +3733,10 @@
             "format": "uuid",
             "type": "string"
           },
+          "className": {
+            "nullable": true,
+            "type": "string"
+          },
           "minutes": {
             "format": "int32",
             "type": "integer"
@@ -3813,6 +3801,10 @@
             "format": "uuid",
             "type": "string"
           },
+          "className": {
+            "nullable": true,
+            "type": "string"
+          },
           "periodEnd": {
             "format": "date",
             "type": "string"
@@ -3828,6 +3820,10 @@
         "additionalProperties": false,
         "properties": {
           "classCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "className": {
             "nullable": true,
             "type": "string"
           },
@@ -5929,10 +5925,6 @@
       "TutorManagement_Modules_Organizations_Contracts_Rooms_CreateRoomRequest": {
         "additionalProperties": false,
         "properties": {
-          "code": {
-            "nullable": true,
-            "type": "string"
-          },
           "locationNote": {
             "nullable": true,
             "type": "string"
@@ -5958,10 +5950,6 @@
       "TutorManagement_Modules_Organizations_Contracts_Rooms_UpdateRoomRequest": {
         "additionalProperties": false,
         "properties": {
-          "code": {
-            "nullable": true,
-            "type": "string"
-          },
           "expectedVersion": {
             "format": "int32",
             "nullable": true,

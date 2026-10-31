@@ -15,10 +15,6 @@ public sealed class RoomRepository(OrganizationDbContext dbContext) : IRoomRepos
             .OrderBy(room => room.NormalizedName).ThenBy(room => room.NormalizedCode)
             .ToArrayAsync(cancellationToken);
 
-    public Task<bool> CodeExistsAsync(Guid centerId, string normalizedCode, Guid? excludingId,
-        CancellationToken cancellationToken) =>
-        dbContext.Rooms.AnyAsync(room => room.CenterId == centerId && room.NormalizedCode == normalizedCode &&
-            (!excludingId.HasValue || room.Id != excludingId.Value), cancellationToken);
 
     public Task<bool> NameExistsAsync(Guid centerId, string normalizedName, Guid? excludingId,
         CancellationToken cancellationToken) =>

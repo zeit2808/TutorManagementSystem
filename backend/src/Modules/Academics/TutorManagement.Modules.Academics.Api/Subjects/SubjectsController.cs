@@ -85,7 +85,7 @@ public sealed class SubjectsController(
         if (!TryGetUserId(out var actorId)) return AuthenticationFailure();
 
         var result = await createHandler.HandleAsync(
-            new CreateSubjectCommand(centerId, actorId, request.Code, request.Name, request.Description),
+            new CreateSubjectCommand(centerId, actorId, request.Name, request.Description),
             cancellationToken);
         return result.IsSuccess
             ? StatusCode(StatusCodes.Status201Created, HttpContext.ToApiResponse(result.Value, "Subject created."))
@@ -108,7 +108,7 @@ public sealed class SubjectsController(
 
         var result = await updateHandler.HandleAsync(
             new UpdateSubjectCommand(centerId, subjectId, actorId, request.ExpectedVersion!.Value,
-                request.Code, request.Name, request.Description),
+                request.Name, request.Description),
             cancellationToken);
         return result.IsSuccess ? Ok(HttpContext.ToApiResponse(result.Value, "Subject updated.")) : MapFailure(result.Error);
     }

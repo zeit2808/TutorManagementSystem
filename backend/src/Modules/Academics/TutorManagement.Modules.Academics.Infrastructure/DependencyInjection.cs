@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TutorManagement.Application.Abstractions.Messaging;
+using TutorManagement.Modules.Academics.Application.Codes;
 using TutorManagement.Modules.Academics.Application.Subjects;
 using TutorManagement.Modules.Academics.Application.Subjects.Abstractions;
 using TutorManagement.Modules.Academics.Application.Subjects.ArchiveSubject;
@@ -10,6 +11,7 @@ using TutorManagement.Modules.Academics.Application.Subjects.ListSubjects;
 using TutorManagement.Modules.Academics.Application.Subjects.ReactivateSubject;
 using TutorManagement.Modules.Academics.Application.Subjects.UpdateSubject;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence;
+using TutorManagement.Modules.Academics.Infrastructure.Persistence.Codes;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence.Repositories;
 using TutorManagement.Modules.Academics.Application.Teaching;
 
@@ -29,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<ISubjectRepository, SubjectRepository>();
         services.AddScoped<ISubjectClassGuard, SubjectClassGuard>();
         services.AddScoped<ITeachingStore, TeachingStore>();
+        services.AddScoped<IAcademicsCodeGenerator, AcademicsCodeGenerator>();
         services.AddScoped<IAttendanceStore, AttendanceStore>();
         services.AddScoped<ITeachingNameReader, TeachingNameReader>();
         services.AddScoped<AttendanceWorkflow>();

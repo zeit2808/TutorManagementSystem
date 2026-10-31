@@ -60,7 +60,7 @@ public sealed class PayrollAcademicsReader(FinanceDbContext db) : IPayrollAcadem
     public Task<bool> CenterExistsAsync(Guid centerId, CancellationToken token) =>
         db.Database.SqlQueryRaw<bool>(
             "SELECT EXISTS(SELECT 1 FROM organization.centers WHERE id = @center) AS \"Value\"",
-            new NpgsqlParameter("center", centerId)).FirstAsync(token);
+            new NpgsqlParameter("center", centerId)).SingleAsync(token);
 
     public async Task<IReadOnlyList<PayrollCenterRow>> ListOperatingCentersAsync(CancellationToken token) =>
         await db.Database.SqlQueryRaw<PayrollCenterRow>("""

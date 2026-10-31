@@ -10,6 +10,7 @@ using TutorManagement.Modules.Academics.Domain.Subjects;
 using TutorManagement.Modules.Academics.Domain.Teaching;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence.Repositories;
+using TutorManagement.Modules.Academics.Infrastructure.Persistence.Codes;
 using TutorManagement.Modules.IdentityAccess.Domain.Authentication;
 using TutorManagement.Modules.IdentityAccess.Infrastructure.Persistence;
 using TutorManagement.Modules.Organizations.Domain.Centers;
@@ -80,7 +81,7 @@ public sealed class RealPostgresStudentAccessTests
 
             StudentAccessWorkflow Access(AcademicsDbContext db) => new(new StudentLinkStore(db), new TeachingStore(db), clock);
             StudentJoinWorkflow Join(AcademicsDbContext db) => new(new StudentLinkStore(db), new TeachingStore(db),
-                new StudentTimetableStore(db), new CourseDirectoryStore(db), clock,
+                new AcademicsCodeGenerator(db), new StudentTimetableStore(db), new CourseDirectoryStore(db), clock,
                 new ScheduleConflictChecker(new StudentTimetableStore(db), clock));
 
             // ---- Class invite: wrong codes lock, the right code joins at once and makes a profile ----
@@ -280,7 +281,7 @@ public sealed class RealPostgresStudentAccessTests
                 DELETE FROM academics.enrollments WHERE center_id = @c;
                 DELETE FROM academics.classes WHERE center_id = @c;
                 DELETE FROM academics.students WHERE center_id = @c;
-                DELETE FROM academics.student_code_counters WHERE center_id = @c;
+                DELETE FROM academics.code_counters WHERE center_id = @c;
                 DELETE FROM academics.subjects WHERE center_id = @c;
                 DELETE FROM organization.center_status_history WHERE center_id = @c;
                 DELETE FROM organization.centers WHERE id = @c;

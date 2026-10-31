@@ -14,7 +14,7 @@ public sealed class ClassRegistrationStore(AcademicsDbContext db) : IClassRegist
             db.Database.CurrentTransaction is null
                 ? "SELECT EXISTS(SELECT 1 FROM organization.centers WHERE id = @center AND status = 'Approved') AS \"Value\""
                 : "SELECT EXISTS(SELECT 1 FROM organization.centers WHERE id = @center AND status = 'Approved' FOR SHARE) AS \"Value\"",
-            new NpgsqlParameter("center", centerId)).FirstAsync(cancellationToken);
+            new NpgsqlParameter("center", centerId)).SingleAsync(cancellationToken);
 
     public async Task<(IReadOnlyList<TeachingClass> Items, int TotalCount)> OpenClassesAsync(Guid centerId,
         int page, int pageSize, CancellationToken cancellationToken)

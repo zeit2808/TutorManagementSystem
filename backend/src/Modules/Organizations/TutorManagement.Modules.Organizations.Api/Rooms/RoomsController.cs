@@ -78,7 +78,7 @@ public sealed class RoomsController(
         if (!TryGetUserId(out var actorId)) return AuthenticationFailure();
 
         var result = await createHandler.HandleAsync(new CreateRoomCommand(centerId, actorId,
-            request.Code, request.Name, request.LocationNote), cancellationToken);
+            request.Name, request.LocationNote), cancellationToken);
         return result.IsSuccess
             ? StatusCode(StatusCodes.Status201Created, HttpContext.ToApiResponse(result.Value, "Room created."))
             : MapFailure(result.Error);
@@ -99,7 +99,7 @@ public sealed class RoomsController(
         if (!TryGetUserId(out var actorId)) return AuthenticationFailure();
 
         var result = await updateHandler.HandleAsync(new UpdateRoomCommand(centerId, roomId, actorId,
-            request.ExpectedVersion!.Value, request.Code, request.Name, request.LocationNote), cancellationToken);
+            request.ExpectedVersion!.Value, request.Name, request.LocationNote), cancellationToken);
         return result.IsSuccess ? Ok(HttpContext.ToApiResponse(result.Value, "Room updated.")) : MapFailure(result.Error);
     }
 

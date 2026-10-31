@@ -10,6 +10,7 @@ using TutorManagement.Modules.Academics.Domain.Subjects;
 using TutorManagement.Modules.Academics.Domain.Teaching;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence.Repositories;
+using TutorManagement.Modules.Academics.Infrastructure.Persistence.Codes;
 using TutorManagement.Modules.IdentityAccess.Domain.Authentication;
 using TutorManagement.Modules.IdentityAccess.Infrastructure.Persistence;
 using TutorManagement.Modules.Organizations.Domain.Centers;
@@ -99,7 +100,7 @@ public sealed class RealPostgresScheduleIntegrityTests
             // A1 + C1: only sessions inside [enrolled, withdrawn), with display names.
             await using (var db = new AcademicsDbContext(academicOptions))
             {
-                var flow = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db),
+                var flow = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db), new AcademicsCodeGenerator(db),
                     clock, new TeachingNameReader(db));
                 var sessions = await flow.MySessionsAsync(center.Id, learner.Id, t0.AddDays(-30), t0.AddDays(30), default);
                 Assert.Equal(new[] { whileEnrolled.Id, lastBeforeLeaving.Id }, sessions.Select(x => x.Id).ToArray());
@@ -133,13 +134,13 @@ public sealed class RealPostgresScheduleIntegrityTests
             // A3: opening registration requires the version the client last saw.
             await using (var db = new AcademicsDbContext(academicOptions))
             {
-                var flow = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db), clock);
+                var flow = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db), new AcademicsCodeGenerator(db), clock);
                 var stale = await flow.SetRegistrationAsync(center.Id, other.Id, true, other.Version + 1, default);
                 Assert.Equal(ClassRegistrationErrors.ConcurrentChange, stale.Error);
             }
             await using (var db = new AcademicsDbContext(academicOptions))
             {
-                var flow = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db), clock);
+                var flow = new ClassRegistrationWorkflow(new ClassRegistrationStore(db), new TeachingStore(db), new AcademicsCodeGenerator(db), clock);
                 var opened = await flow.SetRegistrationAsync(center.Id, other.Id, true, other.Version, default);
                 Assert.True(opened.IsSuccess);
                 Assert.True(opened.Value.RegistrationOpen);

@@ -1,22 +1,25 @@
 using TutorManagement.Application.Abstractions.Clock;
+using TutorManagement.Modules.Academics.Application.Codes;
+using TutorManagement.Modules.Academics.Domain;
 using TutorManagement.Modules.Academics.Domain.Teaching;
 using TutorManagement.Modules.Academics.Application.Subjects.Abstractions;
 using TutorManagement.SharedKernel.Primitives;
 
 namespace TutorManagement.Modules.Academics.Application.Teaching;
 
-public sealed class ClassCatalog(ITeachingStore store, ISubjectClassGuard subjectGuard, IClock clock)
+public sealed class ClassCatalog(ITeachingStore store, IAcademicsCodeGenerator codes, ISubjectClassGuard subjectGuard,
+    IClock clock)
 {
-    public async Task<Result<ClassDto>> CreateAsync(Guid centerId, Guid subjectId, string code,
+    /// <summary>Creates a class with the next LH-000001 style code (D9).</summary>
+    public async Task<Result<ClassDto>> CreateAsync(Guid centerId, Guid subjectId,
         string name, int maxStudents, Guid actorId, CancellationToken token)
     {
-        if (actorId == Guid.Empty || !TeachingClass.AreDetailsValid(code, name, maxStudents))
+        if (actorId == Guid.Empty || !TeachingClass.IsValidName(name) || maxStudents is < 1 or > 500)
             return Result<ClassDto>.Failure(TeachingErrors.Invalid);
         await using var guard = await subjectGuard.BeginAsync(centerId, subjectId, token);
         if (!await store.SubjectIsActiveAsync(centerId, subjectId, token))
             return Result<ClassDto>.Failure(TeachingErrors.SubjectUnavailable);
-        if (await store.ClassCodeExistsAsync(centerId, TeachingClass.NormalizeCode(code), token))
-            return Result<ClassDto>.Failure(TeachingErrors.CodeExists);
+        var code = await codes.NextAsync(centerId, AcademicsCodes.Class, token);
         var value = TeachingClass.Create(centerId, subjectId, code, name, maxStudents, actorId, clock.UtcNow);
         await store.AddAsync(value, token);
         try { await store.SaveAsync(token); }

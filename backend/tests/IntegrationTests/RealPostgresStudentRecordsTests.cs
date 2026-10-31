@@ -60,18 +60,23 @@ public sealed class RealPostgresStudentRecordsTests
                 await identity.SaveChangesAsync();
             }
 
-            // D5 + D9: parent contact is required; empty code → HS-000001…, hand-typed codes are skipped.
+            // D5 + D9: parent contact is required; codes are always generated (HS-000001…), and a code an older
+            // record already holds (typed by hand before D9 covered every create) is skipped.
             Guid firstId, secondId;
             await using (var scope = provider.CreateAsyncScope())
             {
                 var people = scope.ServiceProvider.GetRequiredService<PeopleCatalog>();
                 Assert.Equal(TeachingErrors.InvalidParentPhone,
-                    (await people.CreateStudentAsync(center.Id, null, "Lê Văn A", "Phụ huynh A", "12345", default)).Error);
-                var first = await people.CreateStudentAsync(center.Id, null, "Lê Văn An", "Lê Văn Ba", "0912 345 678", default);
+                    (await people.CreateStudentAsync(center.Id, "Lê Văn A", "Phụ huynh A", "12345", default)).Error);
+                var first = await people.CreateStudentAsync(center.Id, "Lê Văn An", "Lê Văn Ba", "0912 345 678", default);
                 Assert.Equal("HS-000001", first.Value.Code);
                 Assert.Equal("+84912345678", first.Value.ParentPhone);
-                Assert.True((await people.CreateStudentAsync(center.Id, "HS-000002", "Trần Thị Bình", "Trần Văn Ca", "0987654321", default)).IsSuccess);
-                var third = await people.CreateStudentAsync(center.Id, "", "Phạm Minh Châu", "Phạm Văn Dũng", "+84 33 123 4567", default);
+                var academics = scope.ServiceProvider.GetRequiredService<AcademicsDbContext>();
+                var legacy = Student.Create(center.Id, "HS-000002", "Trần Thị Bình", past);
+                legacy.UpdateProfile("Trần Thị Bình", "Trần Văn Ca", "0987654321");
+                await academics.Students.AddAsync(legacy);
+                await academics.SaveChangesAsync();
+                var third = await people.CreateStudentAsync(center.Id, "Phạm Minh Châu", "Phạm Văn Dũng", "+84 33 123 4567", default);
                 Assert.Equal("HS-000003", third.Value.Code);
                 firstId = first.Value.Id;
                 secondId = third.Value.Id;
@@ -186,7 +191,7 @@ public sealed class RealPostgresStudentRecordsTests
                 DELETE FROM academics.enrollments WHERE center_id = @center;
                 DELETE FROM academics.class_applications WHERE center_id = @center;
                 DELETE FROM academics.students WHERE center_id = @center;
-                DELETE FROM academics.student_code_counters WHERE center_id = @center;
+                DELETE FROM academics.code_counters WHERE center_id = @center;
                 DELETE FROM academics.teachers WHERE center_id = @center;
                 DELETE FROM academics.classes WHERE center_id = @center;
                 DELETE FROM academics.subjects WHERE center_id = @center;

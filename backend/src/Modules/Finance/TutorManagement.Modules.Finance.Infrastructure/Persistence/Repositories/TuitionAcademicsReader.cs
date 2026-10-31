@@ -99,7 +99,7 @@ public sealed class TuitionAcademicsReader(FinanceDbContext db) : ITuitionAcadem
     public Task<bool> ClassExistsAsync(Guid centerId, Guid classId, CancellationToken token) =>
         db.Database.SqlQueryRaw<bool>(
             "SELECT EXISTS(SELECT 1 FROM academics.classes WHERE center_id = @center AND id = @class) AS \"Value\"",
-            new NpgsqlParameter("center", centerId), new NpgsqlParameter("class", classId)).FirstAsync(token);
+            new NpgsqlParameter("center", centerId), new NpgsqlParameter("class", classId)).SingleAsync(token);
 
     public sealed record ClassRow(Guid Id, string Code, string Name, bool IsArchived);
     public sealed record SessionRow(Guid ClassId, DateTimeOffset StartUtc);

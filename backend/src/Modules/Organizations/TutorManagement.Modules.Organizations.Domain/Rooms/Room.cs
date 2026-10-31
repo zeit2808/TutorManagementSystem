@@ -40,18 +40,18 @@ public sealed class Room : AggregateRoot<Guid>
         return new Room(centerId, code, name, locationNote, actorId, nowUtc);
     }
 
-    public bool Update(string code, string name, string? locationNote, Guid actorId, DateTimeOffset nowUtc)
+    /// <summary>Renames the room or changes its location note; its generated code (D9) never changes.</summary>
+    public bool Update(string name, string? locationNote, Guid actorId, DateTimeOffset nowUtc)
     {
         if (!IsActive) throw new InvalidOperationException("An archived room cannot be edited.");
         if (actorId == Guid.Empty) throw new ArgumentException("Actor is required.", nameof(actorId));
-        ValidateDetails(code, name, locationNote);
-        var normalizedCode = NormalizeCode(code);
+        ValidateDetails(Code, name, locationNote);
         var normalizedName = NormalizeName(name);
         var trimmedLocation = string.IsNullOrWhiteSpace(locationNote) ? null : locationNote.Trim();
-        if (Code == normalizedCode && Name == normalizedName && LocationNote == trimmedLocation)
+        if (Name == normalizedName && LocationNote == trimmedLocation)
             return false;
 
-        SetDetails(code, name, locationNote);
+        SetDetails(Code, name, locationNote);
         UpdatedByUserId = actorId;
         UpdatedAtUtc = nowUtc;
         Version++;

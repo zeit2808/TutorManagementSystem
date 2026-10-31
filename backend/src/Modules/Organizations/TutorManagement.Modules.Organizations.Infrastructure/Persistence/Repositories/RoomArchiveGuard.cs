@@ -29,7 +29,7 @@ public sealed class RoomArchiveGuard(OrganizationDbContext db) : IRoomArchiveGua
         db.Database.SqlQueryRaw<bool>(
             "SELECT EXISTS(SELECT 1 FROM academics.teaching_sessions WHERE center_id = @center AND room_id = @room AND cancelled_at_utc IS NULL AND end_utc > @now) AS \"Value\"",
             new NpgsqlParameter("center", centerId), new NpgsqlParameter("room", roomId),
-            new NpgsqlParameter("now", now)).FirstAsync(token);
+            new NpgsqlParameter("now", now)).SingleAsync(token);
 
     private sealed class Guard(IDbContextTransaction transaction) : IRoomArchiveTransaction
     {

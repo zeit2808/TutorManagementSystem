@@ -94,7 +94,7 @@ public sealed class StudentLinkStore(AcademicsDbContext db) : IStudentLinkStore
     public Task<bool> CenterApprovedAsync(Guid centerId, CancellationToken token) =>
         db.Database.SqlQueryRaw<bool>(
             "SELECT EXISTS(SELECT 1 FROM organization.centers WHERE id = @center AND status = 'Approved') AS \"Value\"",
-            new NpgsqlParameter("center", centerId)).FirstAsync(token);
+            new NpgsqlParameter("center", centerId)).SingleAsync(token);
 
     public Task<bool> HasActiveEnrollmentAsync(Guid centerId, Guid classId, Guid studentId, CancellationToken token) =>
         db.Enrollments.AnyAsync(x => x.CenterId == centerId && x.ClassId == classId && x.StudentId == studentId &&

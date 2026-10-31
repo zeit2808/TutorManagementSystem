@@ -113,7 +113,7 @@ public sealed class ClassesController(ClassCatalog classes, EnrollmentWorkflow e
         if (!TryGetActor(out var actorId)) return Unauthorized(ApiResponse<object>.Failure(
             [new ApiError("invalid_identity", "A valid user identity is required.")],
             HttpContext.TraceIdentifier, "Unauthorized."));
-        var result = await classes.CreateAsync(centerId, request.SubjectId, request.Code,
+        var result = await classes.CreateAsync(centerId, request.SubjectId,
             request.Name, request.MaxStudents, actorId, token);
         return result.IsSuccess
             ? StatusCode(StatusCodes.Status201Created, HttpContext.ToApiResponse(result.Value, "Class created."))
@@ -244,7 +244,7 @@ public sealed class StudentsController(PeopleCatalog people,
     {
         var validation = await createValidator.ValidateAsync(request, token);
         if (!validation.IsValid) return ValidationFailure(validation.Errors);
-        var result = await people.CreateStudentAsync(centerId, request.Code, request.FullName,
+        var result = await people.CreateStudentAsync(centerId, request.FullName,
             request.ParentName, request.ParentPhone, token);
         return result.IsSuccess
             ? StatusCode(StatusCodes.Status201Created, HttpContext.ToApiResponse(result.Value, "Student created."))
@@ -321,7 +321,7 @@ public sealed class TeachersController(PeopleCatalog people,
     {
         var validation = await createValidator.ValidateAsync(request, token);
         if (!validation.IsValid) return ValidationFailure(validation.Errors);
-        var result = await people.CreateTeacherAsync(centerId, request.Code, request.FullName, token);
+        var result = await people.CreateTeacherAsync(centerId, request.FullName, token);
         return result.IsSuccess
             ? StatusCode(StatusCodes.Status201Created, HttpContext.ToApiResponse(result.Value, "Teacher created."))
             : Failure(result.Error);

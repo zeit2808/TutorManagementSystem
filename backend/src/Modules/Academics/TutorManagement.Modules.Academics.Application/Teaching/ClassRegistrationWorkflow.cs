@@ -1,6 +1,8 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using TutorManagement.Application.Abstractions.Clock;
+using TutorManagement.Modules.Academics.Application.Codes;
+using TutorManagement.Modules.Academics.Domain;
 using TutorManagement.Modules.Academics.Domain.Teaching;
 using TutorManagement.SharedKernel.Primitives;
 
@@ -90,7 +92,8 @@ public static class ClassRegistrationErrors
     public static readonly Error ConcurrentChange = new("class_registration_concurrent_change", "The registration changed. Reload and retry.");
 }
 
-public sealed class ClassRegistrationWorkflow(IClassRegistrationStore store, ITeachingStore teaching, IClock clock,
+public sealed class ClassRegistrationWorkflow(IClassRegistrationStore store, ITeachingStore teaching,
+    IAcademicsCodeGenerator codes, IClock clock,
     ITeachingNameReader? names = null, TutorManagement.Modules.IdentityAccess.Contracts.Members.IUserDirectory? users = null,
     ScheduleConflictChecker? conflicts = null, IStudentLinkStore? links = null, ClassApplicationMail? mail = null)
 {
@@ -204,7 +207,7 @@ public sealed class ClassRegistrationWorkflow(IClassRegistrationStore store, ITe
             return (Result<ClassApplicationDto>.Failure(TeachingErrors.StudentScheduleConflict), check);
         if (student is null)
         {
-            var code = await teaching.NextStudentCodeAsync(centerId, cancellationToken);
+            var code = await codes.NextAsync(centerId, AcademicsCodes.Student, cancellationToken);
             student = Student.CreateForUser(centerId, item.UserId, code, item.FullName, clock.UtcNow);
             await store.AddAsync(student, cancellationToken);
             // M3: a hint for the center only ("Có thể trùng HS-…"); nothing is merged or blocked.

@@ -48,19 +48,19 @@ Trong mọi response thành công, đọc dữ liệu ở `data`; response có d
 
 ## 3. Luồng thành công: Môn học
 
-Thực hiện trong nhóm **`05 · Subjects`**. Thay `{centerId}` bằng ID ở bước 2. Nên dùng mã/tên mới để không đụng dữ liệu test cũ, ví dụ thêm hậu tố `01` hoặc `02`.
+Thực hiện trong nhóm **`05 · Subjects`**. Thay `{centerId}` bằng ID ở bước 2. Nên dùng tên mới để không đụng dữ liệu test cũ, ví dụ thêm hậu tố `01` hoặc `02`.
 
 | Bước trong Swagger | Giá trị nhập | Kết quả phải thấy |
 |---|---|---|
-| `POST /api/v1/centers/{centerId}/subjects` | `{"code":"MATHTEST01","name":"Toán thử 01","description":"Môn dùng để test"}` | `201`; `data.code` là `MATHTEST01`, `data.isActive=true`, `data.version=0`. Ghi lại `data.id` làm `{subjectId}`. |
+| `POST /api/v1/centers/{centerId}/subjects` | `{"name":"Toán thử 01","description":"Môn dùng để test"}` | `201`; `data.code` do server sinh dạng `MH-000001`, `data.isActive=true`, `data.version=0`. Ghi lại `data.id` làm `{subjectId}`. |
 | `GET /api/v1/centers/{centerId}/subjects` | `includeArchived=false` hoặc bỏ trống | `200`; danh sách có môn vừa tạo. |
 | `GET /api/v1/centers/{centerId}/subjects/{subjectId}` | ID vừa tạo | `200`; đúng ID, mã, tên, mô tả. `centerId` lấy từ URL nên không lặp trong response. |
-| `PUT /api/v1/centers/{centerId}/subjects/{subjectId}` | `{"code":"MATHTEST01","name":"Toán thử nâng cao 01","description":"Đã sửa","expectedVersion":0}` | `200`; thông tin đổi, `version=1`. |
+| `PUT /api/v1/centers/{centerId}/subjects/{subjectId}` | `{"name":"Toán thử nâng cao 01","description":"Đã sửa","expectedVersion":0}` | `200`; thông tin đổi, `data.code` giữ nguyên, `version=1`. |
 | `POST /api/v1/centers/{centerId}/subjects/{subjectId}/archive` | `{"expectedVersion":1}` | `200`; `isActive=false`, `version=2`. Audit archive vẫn lưu trong DB, không trả trong DTO thường ngày. |
 | Gọi lại `GET` danh sách | `includeArchived=false`, sau đó `true` | Môn **không có** trong danh sách mặc định nhưng **có** khi `includeArchived=true`. `GET` chi tiết theo ID vẫn đọc được. |
 | `POST /api/v1/centers/{centerId}/subjects/{subjectId}/reactivate` | `{"expectedVersion":2}` | `200`; `isActive=true`, `version=3`; môn lại xuất hiện trong danh sách mặc định. |
 
-Mã môn được trim và chuyển chữ hoa. Tên được trim và gộp khoảng trắng; so trùng tên **không phân biệt chữ hoa/chữ thường**. `description` tùy chọn, tối đa 500 ký tự. Không có `DELETE`: archive giữ lịch sử và giúp các luồng lớp/lịch sau này không bị mất tham chiếu.
+Mã môn (`MH-…`) và mã phòng (`PH-…`) do server sinh theo từng center (D9), không nhận từ request và không đổi qua `PUT`. Tên được trim và gộp khoảng trắng; so trùng tên **không phân biệt chữ hoa/chữ thường**. `description` tùy chọn, tối đa 500 ký tự. Không có `DELETE`: archive giữ lịch sử và giúp các luồng lớp/lịch sau này không bị mất tham chiếu.
 
 ## 4. Luồng thành công: Phòng học
 
@@ -68,9 +68,9 @@ Thực hiện trong nhóm **`06 · Rooms`**, cũng dùng `{centerId}` đã chọ
 
 | Bước trong Swagger | Giá trị nhập | Kết quả phải thấy |
 |---|---|---|
-| `POST /api/v1/centers/{centerId}/rooms` | `{"code":"PTEST01","name":"Phòng thử 01","locationNote":"Tầng 2"}` | `201`; `data.isActive=true`, `data.version=0`. Ghi lại `data.id` làm `{roomId}`. |
+| `POST /api/v1/centers/{centerId}/rooms` | `{"name":"Phòng thử 01","locationNote":"Tầng 2"}` | `201`; `data.code` dạng `PH-000001`, `data.isActive=true`, `data.version=0`. Ghi lại `data.id` làm `{roomId}`. |
 | `GET /api/v1/centers/{centerId}/rooms` và `GET .../rooms/{roomId}` | `includeArchived=false` | `200`; thấy đúng phòng và vị trí, không còn trường `capacity`. |
-| `PUT /api/v1/centers/{centerId}/rooms/{roomId}` | `{"code":"PTEST01","name":"Phòng thử 01","locationNote":"Tầng 3","expectedVersion":0}` | `200`; `locationNote="Tầng 3"`, `version=1`. |
+| `PUT /api/v1/centers/{centerId}/rooms/{roomId}` | `{"name":"Phòng thử 01","locationNote":"Tầng 3","expectedVersion":0}` | `200`; `locationNote="Tầng 3"`, `version=1`. |
 | `POST /api/v1/centers/{centerId}/rooms/{roomId}/archive` | `{"expectedVersion":1}` | `200`; `isActive=false`, `version=2`. |
 | Gọi `GET` danh sách | `includeArchived=false`, sau đó `true` | Phòng bị ẩn trong danh sách mặc định nhưng vẫn có khi yêu cầu cả phòng lưu trữ. |
 | `POST /api/v1/centers/{centerId}/rooms/{roomId}/reactivate` | `{"expectedVersion":2}` | `200`; `isActive=true`, `version=3`. |
@@ -79,7 +79,7 @@ Thực hiện trong nhóm **`06 · Rooms`**, cũng dùng `{centerId}` đã chọ
 
 ## 5. Các case lỗi và phân quyền phải test
 
-Làm với **cả Subjects và Rooms** trừ những dòng ghi riêng. Để không ảnh hưởng dữ liệu đã tạo, dùng mã/tên mới hoặc ID từ luồng thành công. Nếu một case đã làm thay đổi `version`, hãy đọc lại `GET` chi tiết trước case tiếp theo.
+Làm với **cả Subjects và Rooms** trừ những dòng ghi riêng. Để không ảnh hưởng dữ liệu đã tạo, dùng tên mới hoặc ID từ luồng thành công. Nếu một case đã làm thay đổi `version`, hãy đọc lại `GET` chi tiết trước case tiếp theo.
 
 | Case | Cách thử | Kết quả mong đợi / giải thích |
 |---|---|---|
@@ -88,16 +88,16 @@ Làm với **cả Subjects và Rooms** trừ những dòng ghi riêng. Để kh�
 | PlatformAdmin không là thành viên | Login PlatformAdmin không có membership rồi gọi API danh mục của center | `403`: quyền toàn hệ thống không tự biến thành quyền vận hành của từng center. |
 | Trung tâm khác hoặc bị tạm dừng | Dùng token của Owner ở center A gọi route center B không thuộc mình; hoặc dùng center `Suspended` | `403`: authorization chặn trước khi vào nghiệp vụ. |
 | ID bản ghi thuộc center khác | Nếu cùng tài khoản có quyền ở cả A và B, tạo mục ở A rồi `GET/PUT/archive` bằng URL center B và ID mục ở A | `404` (`subject_not_found`/`room_not_found`): repository luôn lọc theo **cả** `centerId` và ID bản ghi. |
-| Mã trùng | Tạo thêm mục trong cùng center với mã cũ, kể cả viết thường hoặc thêm khoảng trắng | `409`, `subject_code_already_exists` hoặc `room_code_already_exists`. |
-| Tên trùng | Mã mới nhưng tên giống, chỉ đổi hoa/thường hoặc khoảng trắng | `409`, `subject_name_already_exists` hoặc `room_name_already_exists`. |
-| Tạo tại center khác | Nếu bạn có quyền quản lý một center B đã duyệt, dùng lại chính mã và tên ở B | `201`: unique áp dụng **theo từng center**, không áp toàn hệ thống. |
-| Dữ liệu không hợp lệ | Mã chứa dấu/khoảng trắng; tên toàn khoảng trắng; mô tả môn dài 501 ký tự; vị trí phòng dài 201 ký tự | `400`, lỗi `validation_error`, có `field` tương ứng. Mã chỉ cho chữ ASCII, số, `-`, `_`, dài 2–20 ký tự; tên dài 2–100 ký tự. |
+| Gửi kèm `code` | Thêm `"code":"ABC"` vào body tạo/sửa | Bị bỏ qua: mã luôn do server sinh và không đổi. |
+| Tên trùng | Tên giống mục cũ, chỉ đổi hoa/thường hoặc khoảng trắng | `409`, `subject_name_already_exists` hoặc `room_name_already_exists`. |
+| Tạo tại center khác | Nếu bạn có quyền quản lý một center B đã duyệt, dùng lại chính tên ở B | `201`: unique áp dụng **theo từng center**; mã ở B có dãy số riêng bắt đầu từ `-000001`. |
+| Dữ liệu không hợp lệ | Tên toàn khoảng trắng; mô tả môn dài 501 ký tự; vị trí phòng dài 201 ký tự | `400`, lỗi `validation_error`, có `field` tương ứng. Tên dài 2–100 ký tự. |
 | Thiếu `expectedVersion` | Gọi `PUT`, `archive` hoặc `reactivate` nhưng bỏ trường này | `400`: không cho cập nhật mù khi không biết bản hiện hành. |
 | `expectedVersion` cũ | Sau khi sửa thành version 1, tiếp tục gửi version 0 | `409`, `subject_concurrent_change`/`room_concurrent_change`. Đọc lại bản mới rồi quyết định có áp dụng thay đổi không. |
 | Sửa mục đã archive | Archive rồi `PUT` với đúng version hiện tại | `409`, `subject_archived_cannot_edit`/`room_archived_cannot_edit`; phải reactivate trước. |
 | Archive hoặc reactivate lặp lại | Gọi lần hai với **version hiện tại** | `409`, `*_already_archived` hoặc `*_already_active`; khác với stale version. |
 | Archive môn đang có lớp active | Tạo lớp dùng môn đó rồi archive môn | `409 subject_has_active_classes`; archive lớp trước. |
-| Dùng lại mã/tên đã archive | Archive một mục rồi tạo mục khác cùng mã hoặc tên | `409`: soft archive **không giải phóng** mã/tên. Muốn dùng lại, reactivate và sửa mục cũ. |
+| Dùng lại tên đã archive | Archive một mục rồi tạo mục khác cùng tên | `409`: soft archive **không giải phóng** tên. Muốn dùng lại, reactivate và sửa mục cũ. |
 | ID không tồn tại | Dùng một GUID mới cho `{subjectId}` hoặc `{roomId}` trong center mà mình có quyền | `404`. |
 
 ### Case hai người sửa cùng lúc

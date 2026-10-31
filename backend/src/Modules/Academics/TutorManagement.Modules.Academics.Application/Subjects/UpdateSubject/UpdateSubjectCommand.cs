@@ -6,8 +6,9 @@ using TutorManagement.SharedKernel.Primitives;
 
 namespace TutorManagement.Modules.Academics.Application.Subjects.UpdateSubject;
 
+/// <summary>Renames or re-describes a subject; the generated code stays as it is.</summary>
 public sealed record UpdateSubjectCommand(Guid CenterId, Guid SubjectId, Guid ActorId, int ExpectedVersion,
-    string Code, string Name, string? Description) : ICommand<SubjectDto>;
+    string Name, string? Description) : ICommand<SubjectDto>;
 
 public sealed class UpdateSubjectCommandHandler(
     ISubjectRepository subjects, IAcademicsUnitOfWork unitOfWork, IClock clock)
@@ -16,7 +17,7 @@ public sealed class UpdateSubjectCommandHandler(
     public async Task<Result<SubjectDto>> HandleAsync(UpdateSubjectCommand command, CancellationToken cancellationToken)
     {
         if (command.CenterId == Guid.Empty || command.SubjectId == Guid.Empty || command.ActorId == Guid.Empty ||
-            !Subject.AreDetailsValid(command.Code, command.Name, command.Description))
+            !Subject.IsValidName(command.Name) || !Subject.IsValidDescription(command.Description))
             return Result<SubjectDto>.Failure(SubjectErrors.InvalidDetails);
 
         var subject = await subjects.FindAsync(command.CenterId, command.SubjectId, cancellationToken);
@@ -25,14 +26,11 @@ public sealed class UpdateSubjectCommandHandler(
             return Result<SubjectDto>.Failure(SubjectErrors.ConcurrentChange);
         if (!subject.IsActive) return Result<SubjectDto>.Failure(SubjectErrors.ArchivedCannotEdit);
 
-        var code = Subject.NormalizeCode(command.Code);
         var normalizedName = Subject.NormalizeName(command.Name).ToUpperInvariant();
-        if (await subjects.CodeExistsAsync(command.CenterId, code, subject.Id, cancellationToken))
-            return Result<SubjectDto>.Failure(SubjectErrors.CodeAlreadyExists);
         if (await subjects.NameExistsAsync(command.CenterId, normalizedName, subject.Id, cancellationToken))
             return Result<SubjectDto>.Failure(SubjectErrors.NameAlreadyExists);
 
-        if (!subject.Update(command.Code, command.Name, command.Description, command.ActorId, clock.UtcNow))
+        if (!subject.Update(command.Name, command.Description, command.ActorId, clock.UtcNow))
             return Result<SubjectDto>.Success(SubjectDto.From(subject));
 
         try

@@ -8,8 +8,6 @@ public sealed class CreateRoomRequestValidator : AbstractValidator<CreateRoomReq
 {
     public CreateRoomRequestValidator()
     {
-        RuleFor(request => request.Code).Must(Room.IsValidCode)
-            .WithMessage("Code must have 2–20 ASCII letters, digits, hyphens or underscores.");
         RuleFor(request => request.Name).Must(Room.IsValidName)
             .WithMessage("Name must have 2–100 characters and no control characters.");
         RuleFor(request => request.LocationNote).Must(Room.IsValidLocationNote)
@@ -21,8 +19,6 @@ public sealed class UpdateRoomRequestValidator : AbstractValidator<UpdateRoomReq
 {
     public UpdateRoomRequestValidator()
     {
-        RuleFor(request => request.Code).Must(Room.IsValidCode)
-            .WithMessage("Code must have 2–20 ASCII letters, digits, hyphens or underscores.");
         RuleFor(request => request.Name).Must(Room.IsValidName)
             .WithMessage("Name must have 2–100 characters and no control characters.");
         RuleFor(request => request.LocationNote).Must(Room.IsValidLocationNote)

@@ -1,4 +1,4 @@
-﻿using TutorManagement.Modules.Academics.Domain.Teaching;
+using TutorManagement.Modules.Academics.Domain.Teaching;
 
 namespace TutorManagement.Modules.Academics.Application.Teaching;
 
@@ -14,14 +14,10 @@ public interface ITeachingStore
     Task<bool> RoomIsActiveAsync(Guid centerId, Guid roomId, CancellationToken token);
     Task<TeachingClass?> FindClassAsync(Guid centerId, Guid id, CancellationToken token);
     Task<(IReadOnlyList<TeachingClass> Items, int TotalCount)> ListClassesAsync(Guid centerId, bool includeArchived, string? search, int page, int pageSize, CancellationToken token);
-    Task<bool> ClassCodeExistsAsync(Guid centerId, string code, CancellationToken token);
     Task<Student?> FindStudentAsync(Guid centerId, Guid id, CancellationToken token);
     Task<(IReadOnlyList<Student> Items, int TotalCount)> ListStudentsAsync(Guid centerId, bool includeArchived, string? search, int page, int pageSize, CancellationToken token);
-    Task<string> NextStudentCodeAsync(Guid centerId, CancellationToken token);
-    Task<bool> StudentCodeExistsAsync(Guid centerId, string code, CancellationToken token);
     Task<Teacher?> FindTeacherAsync(Guid centerId, Guid id, CancellationToken token);
     Task<(IReadOnlyList<Teacher> Items, int TotalCount)> ListTeachersAsync(Guid centerId, bool includeArchived, string? search, int page, int pageSize, CancellationToken token);
-    Task<bool> TeacherCodeExistsAsync(Guid centerId, string code, CancellationToken token);
     Task<Teacher?> FindTeacherByUserAsync(Guid centerId, Guid userId, CancellationToken token);
     Task<IReadOnlyList<TeachingSession>> ListTeacherSessionsAsync(Guid centerId, Guid teacherId,
         DateTimeOffset fromUtc, DateTimeOffset toUtc, CancellationToken token);

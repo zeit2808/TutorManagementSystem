@@ -8,8 +8,6 @@ public sealed class CreateSubjectRequestValidator : AbstractValidator<CreateSubj
 {
     public CreateSubjectRequestValidator()
     {
-        RuleFor(request => request.Code).Must(Subject.IsValidCode)
-            .WithMessage("Code must have 2–20 ASCII letters, digits, hyphens or underscores.");
         RuleFor(request => request.Name).Must(Subject.IsValidName)
             .WithMessage("Name must have 2–100 characters and no control characters.");
         RuleFor(request => request.Description).Must(Subject.IsValidDescription)
@@ -26,8 +24,6 @@ public sealed class UpdateSubjectRequestValidator : AbstractValidator<UpdateSubj
 {
     public UpdateSubjectRequestValidator()
     {
-        RuleFor(request => request.Code).Must(Subject.IsValidCode)
-            .WithMessage("Code must have 2–20 ASCII letters, digits, hyphens or underscores.");
         RuleFor(request => request.Name).Must(Subject.IsValidName)
             .WithMessage("Name must have 2–100 characters and no control characters.");
         RuleFor(request => request.Description).Must(Subject.IsValidDescription)

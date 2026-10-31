@@ -13,10 +13,12 @@ using TutorManagement.Modules.Organizations.Application.Centers.ReviewCenterChan
 using TutorManagement.Modules.Organizations.Application.Centers.ReinstateCenter;
 using TutorManagement.Modules.Organizations.Application.Centers.RejectCenter;
 using TutorManagement.Modules.Organizations.Application.Centers.SuspendCenter;
+using TutorManagement.Modules.Organizations.Application.Codes;
 using TutorManagement.Modules.Organizations.Application.Rooms;
 using TutorManagement.Modules.Organizations.Application.Rooms.Abstractions;
 using TutorManagement.Modules.Organizations.Contracts.Centers;
 using TutorManagement.Modules.Organizations.Infrastructure.Persistence;
+using TutorManagement.Modules.Organizations.Infrastructure.Persistence.Codes;
 using TutorManagement.Modules.Organizations.Infrastructure.Persistence.Repositories;
 
 namespace TutorManagement.Modules.Organizations.Infrastructure;
@@ -36,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<TutorManagement.Modules.Organizations.Application.Centers.CenterLifecycleWorkflow>();
         services.AddScoped<ICenterChangeRequestRepository, CenterChangeRequestRepository>();
         services.AddScoped<IRoomRepository, RoomRepository>();
+        services.AddScoped<IOrganizationCodeGenerator, OrganizationCodeGenerator>();
         services.AddScoped<IRoomArchiveGuard, RoomArchiveGuard>();
         services.AddScoped<IOrganizationCenterReader, OrganizationCenterReader>();
         services.AddScoped<IOrganizationUnitOfWork>(provider =>

@@ -1,4 +1,5 @@
 using TutorManagement.Application.Abstractions.Clock;
+using TutorManagement.Modules.Academics.Application.Codes;
 using TutorManagement.Modules.Academics.Application.Subjects;
 using TutorManagement.Modules.Academics.Application.Subjects.Abstractions;
 using TutorManagement.Modules.Academics.Application.Subjects.ArchiveSubject;
@@ -8,6 +9,7 @@ using TutorManagement.Modules.Academics.Application.Subjects.ListSubjects;
 using TutorManagement.Modules.Academics.Application.Subjects.ReactivateSubject;
 using TutorManagement.Modules.Academics.Application.Subjects.UpdateSubject;
 using TutorManagement.Modules.Academics.Domain.Subjects;
+using TutorManagement.SharedKernel.Primitives;
 
 namespace TutorManagement.IntegrationTests;
 
@@ -18,34 +20,35 @@ public sealed class SubjectCatalogTests
     private static readonly Guid Actor = Guid.Parse("f96e0197-bd86-4f53-965b-528b469d1596");
 
     [Fact]
-    public async Task Codes_and_names_are_unique_per_center_but_not_global()
+    public async Task Codes_are_generated_per_center_and_names_stay_unique()
     {
         var state = new State();
-        var first = await state.Create.HandleAsync(new(CenterA, Actor, " math ", "  Toán   học ", null), default);
+        var first = await state.Create.HandleAsync(new(CenterA, Actor, "  Toán   học ", null), default);
         Assert.True(first.IsSuccess);
-        Assert.Equal("MATH", first.Value.Code);
+        Assert.Equal("MH-000001", first.Value.Code);
         Assert.Equal("Toán học", first.Value.Name);
 
-        var duplicateCode = await state.Create.HandleAsync(new(CenterA, Actor, "MATH", "Vật lý", null), default);
-        Assert.Equal(SubjectErrors.CodeAlreadyExists, duplicateCode.Error);
-        var duplicateName = await state.Create.HandleAsync(new(CenterA, Actor, "PHYSICS", "toán học", null), default);
+        var second = await state.Create.HandleAsync(new(CenterA, Actor, "Vật lý", null), default);
+        Assert.Equal("MH-000002", second.Value.Code);
+        var duplicateName = await state.Create.HandleAsync(new(CenterA, Actor, "toán học", null), default);
         Assert.Equal(SubjectErrors.NameAlreadyExists, duplicateName.Error);
 
-        var otherCenter = await state.Create.HandleAsync(new(CenterB, Actor, "math", "Toán học", null), default);
+        var otherCenter = await state.Create.HandleAsync(new(CenterB, Actor, "Toán học", null), default);
         Assert.True(otherCenter.IsSuccess);
-        Assert.Equal(2, state.SaveCount);
+        Assert.Equal("MH-000001", otherCenter.Value.Code);
+        Assert.Equal(3, state.SaveCount);
     }
 
     [Fact]
     public async Task Subjects_cannot_be_read_or_changed_through_another_center_route()
     {
         var state = new State();
-        var created = await state.Create.HandleAsync(new(CenterA, Actor, "MATH", "Toán", null), default);
+        var created = await state.Create.HandleAsync(new(CenterA, Actor, "Toán", null), default);
         var id = created.Value.Id;
 
         var wrongCenterGet = await state.Get.HandleAsync(new(CenterB, id), default);
         var wrongCenterUpdate = await state.Update.HandleAsync(
-            new(CenterB, id, Actor, 0, "MATH", "Toán mới", null), default);
+            new(CenterB, id, Actor, 0, "Toán mới", null), default);
         var wrongCenterArchive = await state.Archive.HandleAsync(new(CenterB, id, Actor, 0), default);
         Assert.Equal(SubjectErrors.NotFound, wrongCenterGet.Error);
         Assert.Equal(SubjectErrors.NotFound, wrongCenterUpdate.Error);
@@ -58,7 +61,7 @@ public sealed class SubjectCatalogTests
     public async Task Archive_hides_subject_without_deleting_and_reactivate_restores_it()
     {
         var state = new State();
-        var created = await state.Create.HandleAsync(new(CenterA, Actor, "MATH", "Toán", null), default);
+        var created = await state.Create.HandleAsync(new(CenterA, Actor, "Toán", null), default);
         var id = created.Value.Id;
         var archived = await state.Archive.HandleAsync(new(CenterA, id, Actor, 0), default);
         Assert.True(archived.IsSuccess);
@@ -70,9 +73,10 @@ public sealed class SubjectCatalogTests
         Assert.Equal(SubjectErrors.AlreadyArchived,
             (await state.Archive.HandleAsync(new(CenterA, id, Actor, 1), default)).Error);
         Assert.Equal(SubjectErrors.ArchivedCannotEdit,
-            (await state.Update.HandleAsync(new(CenterA, id, Actor, 1, "MATH", "Toán 2", null), default)).Error);
-        Assert.Equal(SubjectErrors.CodeAlreadyExists,
-            (await state.Create.HandleAsync(new(CenterA, Actor, "MATH", "Toán 2", null), default)).Error);
+            (await state.Update.HandleAsync(new(CenterA, id, Actor, 1, "Toán 2", null), default)).Error);
+        // An archived subject still owns its name.
+        Assert.Equal(SubjectErrors.NameAlreadyExists,
+            (await state.Create.HandleAsync(new(CenterA, Actor, "toán", null), default)).Error);
 
         var restored = await state.Reactivate.HandleAsync(new(CenterA, id, Actor, 1), default);
         Assert.True(restored.IsSuccess);
@@ -86,13 +90,17 @@ public sealed class SubjectCatalogTests
     public async Task Editing_same_details_is_a_no_op_and_concurrent_save_returns_conflict()
     {
         var state = new State();
-        var created = await state.Create.HandleAsync(new(CenterA, Actor, "MATH", "Toán", null), default);
-        var same = await state.Update.HandleAsync(new(CenterA, created.Value.Id, Actor, 0, "math", " Toán ", null), default);
+        var created = await state.Create.HandleAsync(new(CenterA, Actor, "Toán", null), default);
+        var same = await state.Update.HandleAsync(new(CenterA, created.Value.Id, Actor, 0, " Toán ", null), default);
         Assert.True(same.IsSuccess);
         Assert.Equal(1, state.SaveCount);
 
+        var renamed = await state.Update.HandleAsync(new(CenterA, created.Value.Id, Actor, 0, "Toán nâng cao", null), default);
+        Assert.Equal("Toán nâng cao", renamed.Value.Name);
+        Assert.Equal(created.Value.Code, renamed.Value.Code);
+
         state.FailNextSave = true;
-        var racing = await state.Update.HandleAsync(new(CenterA, created.Value.Id, Actor, 0, "MATH", "Toán nâng cao", null), default);
+        var racing = await state.Update.HandleAsync(new(CenterA, created.Value.Id, Actor, 1, "Toán 12", null), default);
         Assert.Equal(SubjectErrors.ConcurrentChange, racing.Error);
     }
 
@@ -112,13 +120,14 @@ public sealed class SubjectCatalogTests
         Assert.Equal(1, subject.Version);
     }
 
-    private sealed class State : ISubjectRepository, IAcademicsUnitOfWork, ISubjectClassGuard, IClock
+    private sealed class State : ISubjectRepository, IAcademicsCodeGenerator, IAcademicsUnitOfWork, ISubjectClassGuard, IClock
     {
         private readonly List<Subject> _subjects = [];
+        private readonly Dictionary<(Guid, string), long> _counters = [];
         public DateTimeOffset UtcNow { get; } = new(2026, 10, 19, 0, 0, 0, TimeSpan.Zero);
         public int SaveCount { get; private set; }
         public bool FailNextSave { get; set; }
-        public CreateSubjectCommandHandler Create => new(this, this, this);
+        public CreateSubjectCommandHandler Create => new(this, this, this, this);
         public UpdateSubjectCommandHandler Update => new(this, this, this);
         public ArchiveSubjectCommandHandler Archive => new(this, this, this, this);
         public ReactivateSubjectCommandHandler Reactivate => new(this, this, this);
@@ -144,10 +153,12 @@ public sealed class SubjectCatalogTests
             Task.FromResult<IReadOnlyList<Subject>>(_subjects
                 .Where(subject => subject.CenterId == centerId && (includeArchived || subject.IsActive)).ToArray());
 
-        public Task<bool> CodeExistsAsync(Guid centerId, string normalizedCode, Guid? excludingId,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(_subjects.Any(subject => subject.CenterId == centerId &&
-                subject.NormalizedCode == normalizedCode && subject.Id != excludingId));
+        public Task<string> NextAsync(Guid centerId, CodeKind kind, CancellationToken token)
+        {
+            var next = _counters.GetValueOrDefault((centerId, kind.Prefix)) + 1;
+            _counters[(centerId, kind.Prefix)] = next;
+            return Task.FromResult(EntityCode.Format(kind, next));
+        }
 
         public Task<bool> NameExistsAsync(Guid centerId, string normalizedName, Guid? excludingId,
             CancellationToken cancellationToken) =>
