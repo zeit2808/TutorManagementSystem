@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using TutorManagement.Application.Abstractions.Clock;
 using TutorManagement.Modules.Academics.Domain.Teaching;
 using TutorManagement.Modules.Academics.Infrastructure.Persistence;
@@ -183,9 +184,8 @@ public sealed class RealPostgresShadowBookingTests
         async Task Run()
         {
             await using var db = new FinanceDbContext(options);
-            var academicsOptions = new DbContextOptionsBuilder<FinanceDbContext>().UseNpgsql(connectionString).Options;
-            await using var reader = new FinanceDbContext(academicsOptions);
-            await new PaymentBooker(new PaymentBookingStore(db), new TuitionAcademicsReader(reader), clock).RunShadowOnceAsync(500, default);
+            await new PaymentBooker(new PaymentBookingStore(db), new TuitionAcademicsReader(db), clock,
+                new TuitionStore(db, clock, Services)).RunShadowOnceAsync(500, default);
         }
         async Task<Dictionary<Guid, BankTransaction>> Rows()
         {
@@ -215,5 +215,37 @@ public sealed class RealPostgresShadowBookingTests
         Assert.Equal(rows[byQr.Id].ShadowEvaluatedAtUtc, (await Rows())[byQr.Id].ShadowEvaluatedAtUtc);
         await using (var db = new FinanceDbContext(options))
             Assert.False(await db.Receipts.AnyAsync(x => x.CenterId == center.Id));
+
+        // ---- K18: Shadow next to what staff recorded by hand ----
+        var day = FinanceTime.LocalDate(now);
+        await using (var db = new FinanceDbContext(options))
+        {
+            var tuition = new TuitionWorkflow(new TuitionStore(db, clock, Services), new TuitionAcademicsReader(db), new NoNames(), clock);
+            Assert.True((await tuition.RecordPaymentAsync(center.Id, an.Id, 800_000, "BankTransfer", day, null, null, null, null,
+                Guid.NewGuid(), default)).IsSuccess);
+            Assert.True((await tuition.RecordPaymentAsync(center.Id, binh.Id, 500_000, "BankTransfer", day, null, null, null, null,
+                Guid.NewGuid(), default)).IsSuccess);
+        }
+        ShadowReportDto report;
+        await using (var db = new FinanceDbContext(options))
+            report = (await new PaymentProviderWorkflow(new TuitionStore(db, clock, Services), protector, new StubReauthenticator(),
+                new FixedOwners(), clock).ShadowReportAsync(center.Id, day, day, new TuitionAcademicsReader(db), default)).Value;
+        var verdicts = report.Rows.ToDictionary(x => x.TransactionId, x => x.Verdict);
+        Assert.Equal("Match", verdicts[byQr.Id]);
+        Assert.Equal("MissingManual", verdicts[byStudent.Id]);
+        Assert.Equal("BothSkipped", verdicts[elsewhere.Id]);
+        Assert.Equal("BothSkipped", verdicts[noCode.Id]);
+        Assert.DoesNotContain(held.Id, verdicts.Keys);
+        Assert.Equal(500_000, Assert.Single(report.ManualWithoutTransfer).Amount);
+        Assert.False(report.Agrees);
+        Assert.Equal("Nguyễn An", report.Rows.Single(x => x.TransactionId == byQr.Id).ManualStudentName);
+    }
+
+    private static readonly IServiceProvider Services = new ServiceCollection().BuildServiceProvider();
+
+    private sealed class NoNames : TutorManagement.Modules.IdentityAccess.Contracts.Members.IUserDirectory
+    {
+        public Task<IReadOnlyDictionary<Guid, string>> GetDisplayNamesAsync(IEnumerable<Guid> userIds,
+            CancellationToken cancellationToken) => Task.FromResult<IReadOnlyDictionary<Guid, string>>(new Dictionary<Guid, string>());
     }
 }

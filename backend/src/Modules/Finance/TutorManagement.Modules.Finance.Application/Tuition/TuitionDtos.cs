@@ -83,6 +83,8 @@ public sealed class ReceiptDto
     public string StudentCode { get; set; } = string.Empty;
     public string StudentName { get; set; } = string.Empty;
     public string? PayerName { get; set; }
+    /// <summary>Manual, or Auto when the bank feed booked it.</summary>
+    public string Source { get; set; } = "Manual";
     /// <summary>Cash or BankTransfer.</summary>
     public string Method { get; set; } = string.Empty;
     public long Amount { get; set; }

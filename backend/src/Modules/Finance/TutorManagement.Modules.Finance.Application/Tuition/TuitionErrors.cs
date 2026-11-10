@@ -37,6 +37,8 @@ public static class TuitionErrors
     public static readonly Error SettingsVersion = new("tuition_concurrent_change",
         "The settings were changed by another request. Reload and try again.", "expectedVersion");
     public static readonly Error TeacherForbidden = new("tuition_forbidden", "Teachers cannot see tuition.");
+    public static readonly Error BankTransferIsAutomatic = new("tuition_bank_transfer_automatic",
+        "Bank transfers are booked automatically from SePay for this center; record only cash here.", "method");
     public static readonly Error BankChangeOwnerOnly = new("tuition_bank_owner_only",
         "Only the center owner can change the bank account that receives tuition.", "bankAccountNumber");
 }

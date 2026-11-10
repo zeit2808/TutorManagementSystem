@@ -69,6 +69,17 @@ public sealed class TuitionStore(FinanceDbContext db, IClock clock, IServiceProv
         Domain.Payments.PaymentProvider provider, CancellationToken token) =>
         db.PaymentProviderConfigs.SingleOrDefaultAsync(x => x.CenterId == centerId && x.Provider == provider, token);
 
+    public void Detach() => db.ChangeTracker.Clear();
+
+    public async Task<IReadOnlyList<Domain.Payments.BankTransaction>> ListBankTransactionsAsync(Guid centerId,
+        DateTimeOffset fromUtc, DateTimeOffset toUtc, CancellationToken token) =>
+        await db.BankTransactions.AsNoTracking()
+            .Where(x => x.CenterId == centerId && x.TransactedAtUtc >= fromUtc && x.TransactedAtUtc < toUtc)
+            .OrderBy(x => x.TransactedAtUtc).ToArrayAsync(token);
+
+    public Task<Domain.Payments.BankTransaction?> FindBankTransactionAsync(Guid id, CancellationToken token) =>
+        db.BankTransactions.SingleOrDefaultAsync(x => x.Id == id, token);
+
     public async Task SaveAsync(CancellationToken token)
     {
         try { await db.SaveChangesAsync(token); }

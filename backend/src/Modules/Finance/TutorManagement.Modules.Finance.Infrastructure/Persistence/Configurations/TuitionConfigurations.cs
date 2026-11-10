@@ -121,6 +121,9 @@ public sealed class ReceiptConfiguration : IEntityTypeConfiguration<Receipt>
         builder.Property(x => x.ReceivedOn).HasColumnName("received_on");
         builder.Property(x => x.Note).HasColumnName("note").HasMaxLength(Receipt.MaxNoteLength);
         builder.Property(x => x.RequestId).HasColumnName("request_id");
+        builder.Property(x => x.BankTransactionId).HasColumnName("bank_transaction_id");
+        builder.Property(x => x.Source).HasColumnName("source").HasConversion<string>().HasMaxLength(16)
+            .HasDefaultValue(ReceiptSource.Manual).HasSentinel(ReceiptSource.Manual);
         builder.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id");
         builder.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc");
         builder.Property(x => x.VoidedAtUtc).HasColumnName("voided_at_utc");
@@ -138,6 +141,12 @@ public sealed class ReceiptConfiguration : IEntityTypeConfiguration<Receipt>
         builder.HasIndex(x => new { x.CenterId, x.RequestId }).IsUnique().HasFilter("request_id IS NOT NULL")
             .HasDatabaseName("ux_receipts_request");
         builder.HasIndex(x => new { x.CenterId, x.StudentId }).HasDatabaseName("ix_receipts_student");
+        // One live receipt per bank transfer; void it and the transfer can be assigned again.
+        builder.HasIndex(x => x.BankTransactionId, "ux_receipts_bank_transaction_live").IsUnique()
+            .HasFilter("bank_transaction_id IS NOT NULL AND voided_at_utc IS NULL");
+        // The feed books a transfer at most once ever: a replay cannot undo a person's void.
+        builder.HasIndex(x => x.BankTransactionId, "ux_receipts_bank_transaction_auto").IsUnique()
+            .HasFilter("bank_transaction_id IS NOT NULL AND source = 'Auto'");
     }
 }
 
@@ -159,6 +168,7 @@ public sealed class PaymentIntentConfiguration : IEntityTypeConfiguration<Paymen
         builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(16);
         builder.Property(x => x.ExpiresAtUtc).HasColumnName("expires_at_utc");
         builder.Property(x => x.CancelledAtUtc).HasColumnName("cancelled_at_utc");
+        builder.Property(x => x.PaidAtUtc).HasColumnName("paid_at_utc");
         builder.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id");
         builder.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc");
         builder.Ignore(x => x.TransferContent);

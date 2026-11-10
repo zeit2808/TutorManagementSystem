@@ -75,6 +75,43 @@ public sealed class PaymentBookingStore(FinanceDbContext db) : IPaymentBookingSt
         ], token) == 1;
     }
 
+    public async Task<IReadOnlyList<Guid>> ClaimAutoAsync(Guid leaseId, DateTimeOffset now, TimeSpan lease, int max,
+        CancellationToken token) =>
+        await db.Database.SqlQueryRaw<Guid>("""
+            UPDATE finance.bank_transactions t
+            SET processing_id = @lease, processing_until_utc = @until
+            FROM (
+                SELECT b.id FROM finance.bank_transactions b
+                JOIN finance.payment_provider_configs c ON c.id = b.config_id
+                WHERE b.status = 'Received' AND c.mode = 'Auto'
+                  AND (b.next_attempt_at_utc IS NULL OR b.next_attempt_at_utc <= @now)
+                  AND (b.processing_until_utc IS NULL OR b.processing_until_utc < @now)
+                ORDER BY b.transacted_at_utc
+                LIMIT @max
+                FOR UPDATE OF b SKIP LOCKED) due
+            WHERE t.id = due.id
+            RETURNING t.id AS "Value"
+            """,
+            new NpgsqlParameter("lease", NpgsqlDbType.Uuid) { Value = leaseId },
+            new NpgsqlParameter("until", NpgsqlDbType.TimestampTz) { Value = now.Add(lease).ToUniversalTime() },
+            new NpgsqlParameter("now", NpgsqlDbType.TimestampTz) { Value = now.ToUniversalTime() },
+            new NpgsqlParameter("max", NpgsqlDbType.Integer) { Value = max }).ToListAsync(token);
+
+    public async Task<IReadOnlyList<BankTransaction>> LoadTrackedAsync(IReadOnlyCollection<Guid> ids, CancellationToken token)
+    {
+        var wanted = ids.ToArray();
+        return await db.BankTransactions.Where(x => wanted.Contains(x.Id)).ToListAsync(token);
+    }
+
+    public async Task<IReadOnlyList<PaymentIntent>> LoadIntentsTrackedAsync(Guid centerId, IReadOnlyCollection<Guid> ids,
+        CancellationToken token)
+    {
+        var wanted = ids.ToArray();
+        return wanted.Length == 0
+            ? []
+            : await db.PaymentIntents.Where(x => x.CenterId == centerId && wanted.Contains(x.Id)).ToListAsync(token);
+    }
+
     public async Task FailAsync(Guid transactionId, Guid leaseId, string error, DateTimeOffset now, CancellationToken token)
     {
         var message = error.Length <= 500 ? error : error[..500];

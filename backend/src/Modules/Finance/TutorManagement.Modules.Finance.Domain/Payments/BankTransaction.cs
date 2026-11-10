@@ -42,7 +42,9 @@ public enum IgnoreReason
 {
     OtherAccount = 1,
     Duplicate = 2,
-    NotTuition = 3
+    NotTuition = 3,
+    /// <summary>Received before the center switched to Auto: staff recorded it by hand (K21).</summary>
+    BeforeAuto = 4
 }
 
 /// <summary>A transaction as the provider's API reported it, before it is stored.</summary>
@@ -167,6 +169,61 @@ public sealed class BankTransaction : Entity<Guid>
         row.DuplicateOfId = duplicateOfId;
         row.Status = BankTransactionStatus.Held;
         return row;
+    }
+
+    /// <summary>The bank feed booked it for this student.</summary>
+    public void MarkBooked(Guid studentId, Guid? intentId, DateTimeOffset now)
+    {
+        RequireStatus(BankTransactionStatus.Received);
+        Status = BankTransactionStatus.Booked;
+        StudentId = studentId;
+        IntentId = intentId;
+        BookedAtUtc = now;
+        ReviewReason = null;
+        Finish();
+    }
+
+    /// <summary>A person has to say whose money this is.</summary>
+    public void SendToReview(ReviewReason reason)
+    {
+        RequireStatus(BankTransactionStatus.Received);
+        Status = BankTransactionStatus.NeedsReview;
+        ReviewReason = reason;
+        Finish();
+    }
+
+    /// <summary>Not tuition by rule (another account, before Auto); stays visible in reconciliation.</summary>
+    public void IgnoreByRule(IgnoreReason reason)
+    {
+        RequireStatus(BankTransactionStatus.Received);
+        Status = BankTransactionStatus.Ignored;
+        IgnoreReason = reason;
+        Finish();
+    }
+
+    /// <summary>Its receipt was voided: the money goes back to the queue (K16).</summary>
+    public void ReturnAfterVoid()
+    {
+        if (Status != BankTransactionStatus.Booked) return;
+        Status = BankTransactionStatus.NeedsReview;
+        ReviewReason = Payments.ReviewReason.VoidedReceipt;
+        StudentId = null;
+        IntentId = null;
+        BookedAtUtc = null;
+        Version++;
+    }
+
+    private void RequireStatus(BankTransactionStatus expected)
+    {
+        if (Status != expected) throw new InvalidOperationException($"The transaction is {Status}, not {expected}.");
+    }
+
+    private void Finish()
+    {
+        ProcessingId = null;
+        ProcessingUntilUtc = null;
+        LastError = null;
+        Version++;
     }
 
     private static void Validate(ReceivedBankTransaction received, FetchedBy fetchedBy)

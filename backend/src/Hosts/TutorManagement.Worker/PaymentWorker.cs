@@ -24,6 +24,9 @@ public sealed partial class PaymentWorker(IServiceScopeFactory scopeFactory, ILo
                 // Round 3a: what Shadow centers would book, written next to each pulled transfer.
                 await using (var scope = scopeFactory.CreateAsyncScope())
                     pulled += await scope.ServiceProvider.GetRequiredService<PaymentBooker>().RunShadowOnceAsync(BatchSize * 5, stoppingToken);
+                // Round 3b: Auto centers get their receipts.
+                await using (var scope = scopeFactory.CreateAsyncScope())
+                    pulled += await scope.ServiceProvider.GetRequiredService<PaymentBooker>().RunAutoOnceAsync(BatchSize * 5, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

@@ -166,6 +166,11 @@ public sealed class TuitionWorkflow(ITuitionStore store, ITuitionAcademicsReader
         var today = FinanceTime.LocalDate(now);
         var day = receivedOn ?? today;
         if (day > today || day < today.AddDays(-366)) return Result<ReceiptDto>.Failure(TuitionErrors.InvalidReceivedOn);
+        // T5/K10: with the bank feed in Auto, transfers book themselves; a hand-written one would count the money twice.
+        if (how == PaymentMethod.BankTransfer &&
+            (await store.FindProviderConfigAsync(centerId, Domain.Payments.PaymentProvider.Sepay, token))?.Mode ==
+            Domain.Payments.PaymentProviderMode.Auto)
+            return Result<ReceiptDto>.Failure(TuitionErrors.BankTransferIsAutomatic);
 
         await using var guard = await store.BeginCenterGuardAsync(centerId, token);
         var ledger = await CenterLedger.LoadAsync(centerId, store, reader, token);
@@ -211,6 +216,10 @@ public sealed class TuitionWorkflow(ITuitionStore store, ITuitionAcademicsReader
         if (receipt.IsVoided) return Result<ReceiptDto>.Failure(TuitionErrors.AlreadyVoided);
         receipt.Void(reason, actorId, now);
         ledger.SpreadCredit(receipt.StudentId, now);
+        // K16: the transfer is still real money; it goes back to the queue to be assigned again.
+        if (receipt.BankTransactionId is { } transfer &&
+            await store.FindBankTransactionAsync(transfer, token) is { } bank)
+            bank.ReturnAfterVoid();
         await PersistAsync(ledger, token);
         await guard.CommitAsync(token);
         return Result<ReceiptDto>.Success(await ReceiptViewAsync(ledger, receipt, token));
