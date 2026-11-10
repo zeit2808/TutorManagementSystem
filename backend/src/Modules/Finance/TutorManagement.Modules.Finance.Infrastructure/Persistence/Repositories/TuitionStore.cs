@@ -65,6 +65,10 @@ public sealed class TuitionStore(FinanceDbContext db, IClock clock, IServiceProv
 
     public async Task AddAsync<T>(T entity, CancellationToken token) where T : class => await db.AddAsync(entity, token);
 
+    public Task<Domain.Payments.PaymentProviderConfig?> FindProviderConfigAsync(Guid centerId,
+        Domain.Payments.PaymentProvider provider, CancellationToken token) =>
+        db.PaymentProviderConfigs.SingleOrDefaultAsync(x => x.CenterId == centerId && x.Provider == provider, token);
+
     public async Task SaveAsync(CancellationToken token)
     {
         try { await db.SaveChangesAsync(token); }

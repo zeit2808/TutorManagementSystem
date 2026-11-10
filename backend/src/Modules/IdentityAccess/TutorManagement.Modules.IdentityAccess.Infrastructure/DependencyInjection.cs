@@ -84,6 +84,8 @@ public static class DependencyInjection
             TutorManagement.Modules.IdentityAccess.Infrastructure.Email.PlatformEmailService>();
         services.AddScoped<TutorManagement.Modules.IdentityAccess.Contracts.Members.ICenterMemberDirectory, CenterMemberDirectory>();
         services.AddScoped<TutorManagement.Modules.IdentityAccess.Contracts.Members.IUserDirectory, UserDirectory>();
+        services.AddScoped<TutorManagement.Modules.IdentityAccess.Contracts.Authentication.IPasswordReauthenticator,
+            TutorManagement.Modules.IdentityAccess.Application.Authentication.Reauthentication.PasswordReauthenticator>();
         services.AddScoped<CenterMemberWorkflow>();
         services.AddScoped<PlatformInvitationWorkflow>();
         services.AddScoped<IQueryHandler<GetCurrentUserQuery, CurrentUserDto>, GetCurrentUserQueryHandler>();
@@ -101,6 +103,8 @@ public static class DependencyInjection
     {
         services.AddIdentityAccessPersistence(connectionString);
         services.AddIdentityAccessEmailDelivery(configuration);
+        // Read-only membership view so the Worker can find who to alert (payments).
+        services.AddScoped<TutorManagement.Modules.IdentityAccess.Contracts.Members.ICenterMemberDirectory, CenterMemberDirectory>();
         var auditRetentionDays = configuration.GetValue("SecurityAudit:RetentionDays", 90);
         if (auditRetentionDays is < 1 or > 3650)
             throw new InvalidOperationException("SecurityAudit:RetentionDays must be between 1 and 3650.");

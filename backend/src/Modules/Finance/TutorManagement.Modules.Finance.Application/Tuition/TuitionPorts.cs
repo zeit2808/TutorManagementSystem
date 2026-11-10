@@ -75,6 +75,9 @@ public interface ITuitionStore
     Task<IReadOnlyList<Guid>> ListCentersWithFeesAsync(CancellationToken token);
     /// <summary>Tracked: the student's QR codes that have not been cancelled.</summary>
     Task<IReadOnlyList<PaymentIntent>> ListPendingPaymentIntentsAsync(Guid centerId, Guid studentId, CancellationToken token);
+    /// <summary>Tracked: the center's connection to a bank feed, if any.</summary>
+    Task<Domain.Payments.PaymentProviderConfig?> FindProviderConfigAsync(Guid centerId, Domain.Payments.PaymentProvider provider,
+        CancellationToken token);
 
     Task AddAsync<T>(T entity, CancellationToken token) where T : class;
     Task SaveAsync(CancellationToken token);

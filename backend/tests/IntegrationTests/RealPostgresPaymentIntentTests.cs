@@ -166,8 +166,10 @@ public sealed class RealPostgresPaymentIntentTests
             {
                 Assert.Equal(TuitionErrors.BankNotConfigured,
                     (await Intents(db).CreateForCenterAsync(center.Id, an.Id, null, owner.Id, default)).Error);
-                var saved = await Tuition(db).UpdateSettingsAsync(center.Id, "970436", "0123456789", "Trung Tam QR", 7, true, 0,
-                    owner.Id, default);
+                var saved = await new FinanceSettingsWorkflow(new TuitionStore(db, clock, services), new StubReauthenticator(),
+                        new FixedOwners(owner.Id), clock)
+                    .UpdateAsync(center.Id, owner.Id, true, "970436", "0123456789", "Trung Tam QR", 7, true, 0, "password",
+                        new TutorManagement.Modules.Finance.Application.Payments.RequestOrigin(null, null, null), default);
                 Assert.True(saved.IsSuccess);
             }
 

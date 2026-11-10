@@ -23,6 +23,489 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payments.BankTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("account_number");
+
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempt_count");
+
+                    b.Property<string>("BankBin")
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("bank_bin");
+
+                    b.Property<string>("BankCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("bank_code");
+
+                    b.Property<DateTimeOffset?>("BookedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("booked_at_utc");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("center_id");
+
+                    b.Property<Guid>("ConfigId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("config_id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("transfer_type");
+
+                    b.Property<Guid?>("DuplicateOfId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("duplicate_of_id");
+
+                    b.Property<string>("FetchedBy")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("fetched_by");
+
+                    b.Property<DateTimeOffset>("FirstSeenAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_seen_at_utc");
+
+                    b.Property<string>("IgnoreReason")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("ignore_reason");
+
+                    b.Property<Guid?>("IntentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("intent_id");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTimeOffset>("LastSeenAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at_utc");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at_utc");
+
+                    b.Property<string>("PayloadChecksum")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("payload_checksum");
+
+                    b.Property<Guid?>("ProcessingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("processing_id");
+
+                    b.Property<DateTimeOffset?>("ProcessingUntilUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processing_until_utc");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderBankAccountId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("provider_bank_account_id");
+
+                    b.Property<string>("ProviderTxnId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("provider_txn_id");
+
+                    b.Property<string>("RawPayload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("raw_payload");
+
+                    b.Property<string>("ReferenceCode")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("reference_code");
+
+                    b.Property<string>("ReviewReason")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("review_reason");
+
+                    b.Property<int>("SeenCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("seen_count");
+
+                    b.Property<string>("SemanticKey")
+                        .HasMaxLength(258)
+                        .HasColumnType("character varying(258)")
+                        .HasColumnName("semantic_key");
+
+                    b.Property<DateTimeOffset?>("ShadowEvaluatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("shadow_evaluated_at_utc");
+
+                    b.Property<Guid?>("ShadowIntentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shadow_intent_id");
+
+                    b.Property<string>("ShadowOutcome")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("shadow_outcome");
+
+                    b.Property<string>("ShadowReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("shadow_reason");
+
+                    b.Property<Guid?>("ShadowStudentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shadow_student_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid?>("StudentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTimeOffset>("TransactedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("transacted_at_utc");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.Property<string>("VirtualAccount")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("virtual_account");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConfigId");
+
+                    b.HasIndex("DuplicateOfId");
+
+                    b.HasIndex("NextAttemptAtUtc")
+                        .HasDatabaseName("ix_bank_transactions_pending")
+                        .HasFilter("status = 'Received'");
+
+                    b.HasIndex("SemanticKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_bank_transactions_semantic_key")
+                        .HasFilter("semantic_key IS NOT NULL");
+
+                    b.HasIndex("CenterId", "Amount")
+                        .HasDatabaseName("ix_bank_transactions_center_amount");
+
+                    b.HasIndex("CenterId", "Status")
+                        .HasDatabaseName("ix_bank_transactions_center_status");
+
+                    b.HasIndex("CenterId", "TransactedAtUtc")
+                        .HasDatabaseName("ix_bank_transactions_center_date");
+
+                    b.HasIndex("Provider", "ProviderTxnId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_bank_transactions_provider_txn");
+
+                    b.ToTable("bank_transactions", "finance", t =>
+                        {
+                            t.HasCheckConstraint("ck_bank_transactions_amount", "amount > 0");
+                        });
+                });
+
+            modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payments.PaymentAuditEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("action");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<string>("AfterJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("after_json");
+
+                    b.Property<DateTimeOffset>("AtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("at_utc");
+
+                    b.Property<string>("BeforeJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("before_json");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("center_id");
+
+                    b.Property<Guid?>("TargetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_id");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("target_type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CenterId", "AtUtc")
+                        .HasDatabaseName("ix_payment_audit_events_center");
+
+                    b.ToTable("payment_audit_events", "finance");
+                });
+
+            modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payments.PaymentProviderConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("account_number");
+
+                    b.Property<byte[]>("ApiToken")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("api_token");
+
+                    b.Property<string>("ApiTokenFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("api_token_fingerprint");
+
+                    b.Property<DateTimeOffset?>("AutoSinceUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("auto_since_utc");
+
+                    b.Property<string>("BankBin")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("bank_bin");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("center_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("EndpointKey")
+                        .IsRequired()
+                        .HasMaxLength(43)
+                        .HasColumnType("character varying(43)")
+                        .HasColumnName("endpoint_key");
+
+                    b.Property<long>("InvalidSignatureCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("invalid_signature_count");
+
+                    b.Property<string>("KeyId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("key_id");
+
+                    b.Property<DateTimeOffset?>("LastInvalidSignatureAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_invalid_signature_at_utc");
+
+                    b.Property<string>("LastPullError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("last_pull_error");
+
+                    b.Property<DateTimeOffset?>("LastPulledAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_pulled_at_utc");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("mode");
+
+                    b.Property<DateTimeOffset?>("NextPullAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_pull_at_utc");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("PullCursor")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("pull_cursor");
+
+                    b.Property<Guid?>("PullProcessingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pull_processing_id");
+
+                    b.Property<DateTimeOffset?>("PullProcessingUntilUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("pull_processing_until_utc");
+
+                    b.Property<DateTimeOffset?>("PullRequestedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("pull_requested_at_utc");
+
+                    b.Property<int>("PullRetryCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("pull_retry_count");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.Property<byte[]>("WebhookSecret")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("webhook_secret");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EndpointKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_provider_configs_endpoint");
+
+                    b.HasIndex("NextPullAtUtc")
+                        .HasDatabaseName("ix_payment_provider_configs_due")
+                        .HasFilter("mode <> 'Off'");
+
+                    b.HasIndex("BankBin", "AccountNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_provider_configs_auto_account")
+                        .HasFilter("mode = 'Auto'");
+
+                    b.HasIndex("CenterId", "Provider")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_provider_configs_center");
+
+                    b.HasIndex("Provider", "ApiTokenFingerprint")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_provider_configs_token");
+
+                    b.ToTable("payment_provider_configs", "finance");
+                });
+
+            modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payments.PaymentWebhookDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long?>("Amount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("ConfigId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("config_id");
+
+                    b.Property<int>("DeliveryCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("delivery_count");
+
+                    b.Property<DateTimeOffset>("FirstSeenAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_seen_at_utc");
+
+                    b.Property<DateTimeOffset>("LastSeenAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at_utc");
+
+                    b.Property<string>("RawBody")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("raw_body");
+
+                    b.Property<string>("ReferenceCode")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("reference_code");
+
+                    b.Property<long>("WebhookId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("webhook_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConfigId", "WebhookId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_webhook_deliveries_webhook");
+
+                    b.ToTable("payment_webhook_deliveries", "finance");
+                });
+
             modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payroll.PayRate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1099,6 +1582,29 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_tuition_discounts_value", "(kind = 'Percent' AND value BETWEEN 1 AND 100) OR (kind = 'Amount' AND value > 0 AND value % 1000 = 0)");
                         });
+                });
+
+            modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payments.BankTransaction", b =>
+                {
+                    b.HasOne("TutorManagement.Modules.Finance.Domain.Payments.PaymentProviderConfig", null)
+                        .WithMany()
+                        .HasForeignKey("ConfigId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TutorManagement.Modules.Finance.Domain.Payments.BankTransaction", null)
+                        .WithMany()
+                        .HasForeignKey("DuplicateOfId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payments.PaymentWebhookDelivery", b =>
+                {
+                    b.HasOne("TutorManagement.Modules.Finance.Domain.Payments.PaymentProviderConfig", null)
+                        .WithMany()
+                        .HasForeignKey("ConfigId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payroll.PayrollClosedMonth", b =>
