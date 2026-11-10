@@ -37,6 +37,7 @@ internal sealed class PaymentTestData(string connectionString) : IAsyncDisposabl
             DELETE FROM finance.payment_webhook_deliveries
               WHERE config_id IN (SELECT id FROM finance.payment_provider_configs WHERE center_id = ANY(@centers));
             DELETE FROM finance.payment_provider_configs WHERE center_id = ANY(@centers);
+            DELETE FROM finance.payment_intents WHERE center_id = ANY(@centers);
             DELETE FROM finance.finance_settings WHERE center_id = ANY(@centers);
             DELETE FROM iam.email_outbox_messages WHERE recipient = ANY(@emails);
             """, connection, transaction);

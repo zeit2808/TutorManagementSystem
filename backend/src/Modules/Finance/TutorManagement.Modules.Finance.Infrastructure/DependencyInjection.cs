@@ -52,6 +52,8 @@ public static class DependencyInjection
             provider.GetRequiredService<SepayOptions>()));
         services.AddScoped<IPaymentPullStore, PaymentPullStore>();
         services.AddScoped<PaymentFetcher>();
+        services.AddScoped<IPaymentBookingStore, PaymentBookingStore>();
+        services.AddScoped<PaymentBooker>();
         return services;
     }
 
