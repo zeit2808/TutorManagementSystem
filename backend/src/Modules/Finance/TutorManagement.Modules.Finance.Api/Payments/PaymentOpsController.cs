@@ -47,6 +47,15 @@ public sealed class PaymentOpsController(PaymentOpsWorkflow workflow) : TuitionC
     public async Task<IActionResult> RequestRun(Guid centerId, CancellationToken token) =>
         Done(await workflow.RequestAsync(centerId, token));
 
+    /// <summary>
+    /// Đợt 5 metrics for the last <c>days</c> days (1–31): doorbells, redeliveries, bad signatures, what found each
+    /// transfer, statuses, latency from transfer to Auto receipt, manual work, receipt conflicts and the oldest wait.
+    /// </summary>
+    [Authorize(Policy = CenterAccessPolicyNames.Management), HttpGet("metrics")]
+    [ProducesResponseType<ApiResponse<PaymentMetricsDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Metrics(Guid centerId, [FromQuery] int days = 7, CancellationToken token = default) =>
+        Done(await workflow.MetricsAsync(centerId, days, token));
+
     /// <summary><c>state</c>: Open (default), Acknowledged, Resolved or All.</summary>
     [Authorize(Policy = CenterAccessPolicyNames.Management), HttpGet("alerts")]
     [ProducesResponseType<ApiResponse<List<PaymentAlertDto>>>(StatusCodes.Status200OK)]

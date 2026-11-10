@@ -485,7 +485,14 @@ Chia thành các PR nhỏ, theo thứ tự:
 - Worker riêng `PaymentOpsWorker` (30 giây một vòng), để quét 3 ngày không làm chậm kéo và ghi sổ.
 - API: `GET .../payment-provider/reconciliations`, `GET .../reconciliations/{id}`, `GET .../alerts?state=Open|Acknowledged|Resolved|All` (Chủ, QL); `POST .../reconciliations`, `POST .../alerts/{id}/acknowledge` (Chủ).
 - Test Postgres thật: đủ bảy loại phát hiện trên một sổ bị làm hỏng có chủ đích, một email cho cả bảy, chạy lại không email lại, sửa xong thì đóng, đã xem thì im, SePay sập vẫn kiểm tra sổ, năm cảnh báo theo dõi, mở lại khi lỗi quay lại, email tổng hợp mỗi ngày một lần.
-- Còn 5b: bộ chỉ số, màn "Đối soát và cảnh báo" ở frontend, tài liệu hướng dẫn trung tâm tự kết nối.
+
+**5b (xong 10/11/2026):**
+
+- `GET .../payment-provider/metrics?days=1–31` (Chủ, QL), tính từ dữ liệu đã lưu, không thêm bộ đếm: chuông ký đúng và tỉ lệ gửi lại, chuông theo giờ 24 giờ qua, tổng chuông sai chữ ký, giao dịch theo trạng thái và theo nguồn tìm thấy (webhook, kéo 5 phút, đối soát), giao dịch SePay liệt kê lại, đụng unique ở `receipts`, số lần gán / bỏ qua / thử lại tay, độ trễ chuyển tiền → biên lai Auto (p50, p95, lớn nhất), tuổi giao dịch `Received` cũ nhất, số cảnh báo mở, lần đối soát gần nhất.
+- Frontend tab **Học phí → Đối soát** (Chủ, QL): cảnh báo (lọc, "Đã xem" cho Chủ), lịch sử đối soát (chi tiết từng phát hiện, "Đối soát ngay" cho Chủ), chỉ số vận hành.
+- Hướng dẫn cho trung tâm: [HUONG-DAN-KET-NOI-SEPAY.md](HUONG-DAN-KET-NOI-SEPAY.md).
+- Đo thật trên SePay sandbox (trung tâm thử D7): một lần đối soát 1,5 giây, SePay liệt kê 8 giao dịch, không bỏ lỡ, không đổi dữ liệu, tổng khớp, không phát hiện; chuyển tiền → biên lai Auto 84 giây (do lúc đó Worker được chạy tay).
+- Chưa đo: "số cập nhật có điều kiện bị từ chối" và "chuông mà API không có gì mới" cần bộ đếm riêng; để lại khi chạy thật thấy cần.
 
 ### Kiểm thử xuyên suốt
 - Unit: chuỗi VietQR và CRC, mã kiểm tra, parser, bộ khớp, gom chuông, token bucket.

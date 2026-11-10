@@ -16,6 +16,91 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Repositorie
 /// </summary>
 public sealed class PaymentOpsStore(FinanceDbContext db, PaymentPullStore pulls) : IPaymentOpsStore, IPaymentOpsReader
 {
+    public async Task<PaymentMetricsDto> MetricsAsync(Guid centerId, DateTimeOffset now, int days, CancellationToken token)
+    {
+        var to = now.ToUniversalTime();
+        var from = to.AddDays(-days);
+        NpgsqlParameter[] Args() =>
+        [
+            P("center", NpgsqlDbType.Uuid, centerId), P("from", NpgsqlDbType.TimestampTz, from),
+            P("to", NpgsqlDbType.TimestampTz, to), P("day", NpgsqlDbType.TimestampTz, to.AddHours(-24))
+        ];
+        var doorbells = await db.Database.SqlQueryRaw<PairRow>("""
+            SELECT COUNT(*)::bigint AS "Left", COUNT(*) FILTER (WHERE d.delivery_count > 1)::bigint AS "Right"
+            FROM finance.payment_webhook_deliveries d JOIN finance.payment_provider_configs c ON c.id = d.config_id
+            WHERE c.center_id = @center AND d.first_seen_at_utc >= @from AND d.first_seen_at_utc <= @to
+            """, Args()).SingleAsync(token);
+        var hours = await db.Database.SqlQueryRaw<KeyCount>("""
+            SELECT FLOOR(EXTRACT(EPOCH FROM (d.first_seen_at_utc - @day)) / 3600)::int::text AS "Key", COUNT(*)::int AS "Count"
+            FROM finance.payment_webhook_deliveries d JOIN finance.payment_provider_configs c ON c.id = d.config_id
+            WHERE c.center_id = @center AND d.first_seen_at_utc >= @day AND d.first_seen_at_utc <= @to
+            GROUP BY 1
+            """, Args()).ToListAsync(token);
+        var byHour = new int[24];
+        foreach (var hour in hours)
+            if (int.TryParse(hour.Key, System.Globalization.CultureInfo.InvariantCulture, out var index))
+                byHour[Math.Clamp(index, 0, 23)] += hour.Count;
+        var statuses = await db.Database.SqlQueryRaw<KeyCount>("""
+            SELECT status AS "Key", COUNT(*)::int AS "Count" FROM finance.bank_transactions
+            WHERE center_id = @center AND first_seen_at_utc >= @from AND first_seen_at_utc <= @to GROUP BY status
+            """, Args()).ToListAsync(token);
+        var fetchedBy = await db.Database.SqlQueryRaw<KeyCount>("""
+            SELECT fetched_by AS "Key", COUNT(*)::int AS "Count" FROM finance.bank_transactions
+            WHERE center_id = @center AND first_seen_at_utc >= @from AND first_seen_at_utc <= @to GROUP BY fetched_by
+            """, Args()).ToListAsync(token);
+        var transfers = await db.Database.SqlQueryRaw<MetricsRow>("""
+            SELECT COALESCE(SUM(amount), 0)::bigint AS "Amount",
+                   COUNT(*) FILTER (WHERE seen_count > 1)::int AS "SeenAgain",
+                   COUNT(*) FILTER (WHERE last_error LIKE '%ux_receipts_bank_transaction%')::int AS "Conflicts",
+                   (SELECT EXTRACT(EPOCH FROM (@to - MIN(first_seen_at_utc)))::float8 FROM finance.bank_transactions
+                    WHERE center_id = @center AND status = 'Received') AS "OldestReceived"
+            FROM finance.bank_transactions
+            WHERE center_id = @center AND first_seen_at_utc >= @from AND first_seen_at_utc <= @to
+            """, Args()).SingleAsync(token);
+        var latency = await db.Database.SqlQueryRaw<LatencyRow>("""
+            SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY s)::float8 AS "P50",
+                   percentile_cont(0.95) WITHIN GROUP (ORDER BY s)::float8 AS "P95", MAX(s)::float8 AS "Max"
+            FROM (SELECT GREATEST(EXTRACT(EPOCH FROM (r.created_at_utc - t.transacted_at_utc)), 0) AS s
+                  FROM finance.receipts r JOIN finance.bank_transactions t ON t.id = r.bank_transaction_id
+                  WHERE t.center_id = @center AND r.source = 'Auto'
+                    AND t.transacted_at_utc >= @from AND t.transacted_at_utc <= @to) x
+            """, Args()).SingleAsync(token);
+        var manual = await db.Database.SqlQueryRaw<KeyCount>("""
+            SELECT action AS "Key", COUNT(*)::int AS "Count" FROM finance.payment_audit_events
+            WHERE center_id = @center AND at_utc >= @from AND at_utc <= @to
+              AND action IN ('transfer_assigned', 'transfer_ignored', 'transfer_retried')
+            GROUP BY action
+            """, Args()).ToListAsync(token);
+        var config = await db.PaymentProviderConfigs.AsNoTracking().Where(x => x.CenterId == centerId)
+            .Select(x => new { x.InvalidSignatureCount, x.LastInvalidSignatureAtUtc }).FirstOrDefaultAsync(token);
+        var last = await db.ReconciliationRuns.AsNoTracking().Where(x => x.CenterId == centerId)
+            .OrderByDescending(x => x.StartedAtUtc).FirstOrDefaultAsync(token);
+        var openAlerts = await db.PaymentAlerts.CountAsync(x => x.CenterId == centerId && x.State == PaymentAlertState.Open, token);
+        int Manual(string action) => manual.FirstOrDefault(x => x.Key == action)?.Count ?? 0;
+        return new PaymentMetricsDto
+        {
+            Days = days, FromUtc = from, ToUtc = to,
+            Doorbells = (int)doorbells.Left, DoorbellsRedelivered = (int)doorbells.Right, DoorbellsByHour = [.. byHour],
+            InvalidSignatureTotal = config?.InvalidSignatureCount ?? 0, LastInvalidSignatureAtUtc = config?.LastInvalidSignatureAtUtc,
+            Transfers = statuses.Sum(x => x.Count), TransferAmount = transfers.Amount,
+            ByStatus = statuses.ToDictionary(x => x.Key, x => x.Count),
+            ByFetchedBy = fetchedBy.ToDictionary(x => x.Key, x => x.Count),
+            SeenAgain = transfers.SeenAgain, ReceiptConflicts = transfers.Conflicts,
+            ManualAssigned = Manual("transfer_assigned"), ManualIgnored = Manual("transfer_ignored"),
+            ManualRetried = Manual("transfer_retried"),
+            LatencyP50Seconds = latency.P50, LatencyP95Seconds = latency.P95, LatencyMaxSeconds = latency.Max,
+            OldestReceivedSeconds = transfers.OldestReceived, OpenAlerts = openAlerts,
+            LastReconciledAtUtc = last?.FinishedAtUtc, LastReconciliationStatus = last?.Status.ToString(),
+            LastReconciliationFindings = last?.FindingCount
+        };
+    }
+
+    public sealed record KeyCount(string Key, int Count);
+
+    public sealed record MetricsRow(long Amount, int SeenAgain, int Conflicts, double? OldestReceived);
+
+    public sealed record LatencyRow(double? P50, double? P95, double? Max);
+
     public async Task<(IReadOnlyList<ReconciliationRun> Items, int Total)> ListRunsAsync(Guid centerId, int page, int pageSize,
         CancellationToken token)
     {

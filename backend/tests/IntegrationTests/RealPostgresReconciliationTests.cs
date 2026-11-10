@@ -446,5 +446,29 @@ public sealed class RealPostgresReconciliationTests
         clock.Now = Local(23, 7, 1);
         await Monitor();
         Assert.Equal(5, (await Emails()).Count);
+
+        // 8. Metrics for the week, from what is stored.
+        await using (var db = new FinanceDbContext(options))
+        {
+            var workflow = new PaymentOpsWorkflow(Ops(db), Ops(db), clock);
+            Assert.Equal(PaymentOpsErrors.InvalidDays, (await workflow.MetricsAsync(center.Id, 0, default)).Error);
+            var metrics = (await workflow.MetricsAsync(center.Id, 7, default)).Value;
+            Assert.Equal(3, metrics.Doorbells);
+            Assert.Equal(0, metrics.DoorbellsRedelivered);
+            Assert.Equal(24, metrics.DoorbellsByHour.Count);
+            Assert.Equal(0, metrics.DoorbellsByHour.Sum()); // all three are older than a day
+            Assert.Equal(8, metrics.InvalidSignatureTotal);
+            Assert.Equal(7, metrics.Transfers);
+            Assert.Equal(6, metrics.ByFetchedBy["Doorbell"]);
+            Assert.Equal(1, metrics.ByFetchedBy["Manual"]);
+            Assert.Equal(3, metrics.ByStatus["Booked"]);
+            Assert.Equal(1, metrics.ByStatus["Failed"]);
+            Assert.Equal(1, metrics.ReceiptConflicts);
+            Assert.True(metrics.SeenAgain >= 4); // listed again by the second and third reconciliation
+            Assert.NotNull(metrics.LatencyP50Seconds);
+            Assert.Equal((clock.Now - Local(20, 2, 5)).TotalSeconds, metrics.OldestReceivedSeconds!.Value, 3);
+            Assert.True(metrics.OpenAlerts > 0);
+            Assert.Equal("ScanFailed", metrics.LastReconciliationStatus);
+        }
     }
 }
