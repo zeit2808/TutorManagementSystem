@@ -88,6 +88,12 @@ Mặc định, đổi được nếu bạn muốn:
 
 **Thử webhook thật (bước 2d, 10/11/2026):** chữ ký đúng HMAC-SHA256 trên `{timestamp}.{raw body}`, header `X-SePay-Signature: sha256=<hex>`, `X-SePay-Timestamp` là Unix giây. Cả 3 lần 401 đầu tiên là do Secret Key dán trên SePay khác với Secret đã lưu; log `SePay webhook refused: ...` cho biết ngay lý do (thiếu header, lệch giờ bao nhiêu giây, sai định dạng hay không khớp secret) mà không ghi secret.
 
+**Kéo thật (bước 2e, 10/11/2026):** một lượt `PaymentFetcher` trên sandbox cho trung tâm thử lấy về 6 giao dịch tiền vào, khớp 4/4 `referenceCode` trong nhật ký chuông, và cả **2 giao dịch có webhook bị 401** (Secret Key lệch lúc đầu): webhook hỏng không làm mất tiền. Lượt đầu lọc theo ngày kết nối, con trỏ dời tới `id` mới nhất, lịch kéo kế tiếp +5 phút.
+
+- Trên sandbox, tiền vào tài khoản ảo: `account_number = 0000000001`, `va = SBSEPAY...`. Tài khoản học phí của trung tâm thử là số khác, nên `bank_bin` để trống. **Trước Đợt 3:** tài khoản nhận trong cài đặt học phí phải là đúng số tài khoản (hoặc VA) mà SePay báo, nếu không mọi giao dịch sẽ là `OtherAccount`.
+- Độ trễ webhook → API (điểm đo 5) chưa đo riêng: lượt kéo chạy sau khi đã có đủ webhook. Đo khi chạy Worker liên tục ở Đợt 3.
+- DB local còn nhiều cấu hình thanh toán do test để lại (khoá thử ngẫu nhiên). Worker gặp chúng chỉ ghi `last_pull_error` ("cannot be decrypted") và không gọi SePay; nên cho các test tự dọn hoặc dọn DB local trước khi chạy Worker lâu dài.
+
 **Phát hiện thêm:**
 
 - **Cloudflare chặn client không có User-Agent rõ ràng** (lỗi 1010 với User-Agent mặc định). SePay client phải gửi User-Agent cố định, vd. `TutorManagement/<version>`.
