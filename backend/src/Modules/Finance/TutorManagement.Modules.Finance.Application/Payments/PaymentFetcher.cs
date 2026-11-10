@@ -40,6 +40,9 @@ public interface IPaymentPullStore
     /// <summary>Releases the lease, records the error and when to try again. Nothing is stored or skipped.</summary>
     Task FailAsync(PullTarget target, Guid leaseId, string error, DateTimeOffset nextPullAtUtc, DateTimeOffset now,
         CancellationToken token);
+
+    /// <summary>Records each field name not seen before for this center, for the monitor to report once.</summary>
+    Task RecordUnknownFieldsAsync(Guid centerId, IReadOnlyCollection<string> fields, DateTimeOffset now, CancellationToken token);
 }
 
 /// <summary>
@@ -77,6 +80,7 @@ public sealed class PaymentFetcher(IPaymentPullStore store, IEnumerable<IBankFee
         var doorbell = target.PullRetryCount > 0 ||
                        target.PullRequestedAtUtc is { } rang && (target.LastPulledAtUtc is not { } pulled || rang > pulled);
         List<ReceivedBankTransaction> received = [];
+        HashSet<string> unknown = new(StringComparer.Ordinal);
         string? newest = null;
         var complete = false;
         try
@@ -92,6 +96,7 @@ public sealed class PaymentFetcher(IPaymentPullStore store, IEnumerable<IBankFee
                     target.Cursor is null ? target.CreatedAtUtc : null, page, PerPage), token);
                 if (page == 1 && result.Transactions.Count > 0) newest = result.Transactions[0].ProviderTxnId;
                 received.AddRange(result.Transactions);
+                if (result.UnknownFields is { } fields) unknown.UnionWith(fields);
                 if (!result.HasMore) { complete = true; break; }
             }
         }
@@ -120,5 +125,6 @@ public sealed class PaymentFetcher(IPaymentPullStore store, IEnumerable<IBankFee
                 : new PullSchedule(now.Add(Periodic), 0);
         await store.SaveAsync(target, leaseId, incoming, doorbell ? FetchedBy.Doorbell : FetchedBy.Periodic, cursor, schedule,
             now, token);
+        if (unknown.Count > 0) await store.RecordUnknownFieldsAsync(target.CenterId, unknown, now, token);
     }
 }

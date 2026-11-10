@@ -16,6 +16,7 @@ builder.Services.AddFinanceReminders(connectionString);
 builder.Services.AddFinancePaymentPulling();
 builder.Services.AddHostedService<Worker>();
 builder.Services.AddHostedService<PaymentWorker>();
+builder.Services.AddHostedService<PaymentOpsWorker>();
 
 var host = builder.Build();
 await host.RunAsync();

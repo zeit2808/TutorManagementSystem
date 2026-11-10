@@ -21,6 +21,9 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
     public DbSet<PaymentWebhookDelivery> PaymentWebhookDeliveries => Set<PaymentWebhookDelivery>();
     public DbSet<BankTransaction> BankTransactions => Set<BankTransaction>();
     public DbSet<PaymentAuditEvent> PaymentAuditEvents => Set<PaymentAuditEvent>();
+    public DbSet<ReconciliationRun> ReconciliationRuns => Set<ReconciliationRun>();
+    public DbSet<ReconciliationFinding> ReconciliationFindings => Set<ReconciliationFinding>();
+    public DbSet<PaymentAlert> PaymentAlerts => Set<PaymentAlert>();
     public DbSet<PayrollConfig> PayrollConfigs => Set<PayrollConfig>();
     public DbSet<PayrollConfigChange> PayrollConfigChanges => Set<PayrollConfigChange>();
     public DbSet<PayRate> PayRates => Set<PayRate>();

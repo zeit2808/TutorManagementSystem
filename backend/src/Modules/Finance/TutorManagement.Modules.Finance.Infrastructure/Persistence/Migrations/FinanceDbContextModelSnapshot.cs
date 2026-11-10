@@ -249,6 +249,87 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payments.PaymentAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("AcknowledgedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("acknowledged_at_utc");
+
+                    b.Property<Guid?>("AcknowledgedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("acknowledged_by_user_id");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("center_id");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("detail");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("fingerprint");
+
+                    b.Property<DateTimeOffset>("FirstSeenAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_seen_at_utc");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset?>("LastEmailedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_emailed_at_utc");
+
+                    b.Property<DateTimeOffset>("LastSeenAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at_utc");
+
+                    b.Property<long?>("Metric")
+                        .HasColumnType("bigint")
+                        .HasColumnName("metric");
+
+                    b.Property<DateTimeOffset?>("ResolvedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at_utc");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("state");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CenterId", "Fingerprint")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_alerts_fingerprint");
+
+                    b.HasIndex("CenterId", "State")
+                        .HasDatabaseName("ix_payment_alerts_state");
+
+                    b.ToTable("payment_alerts", "finance");
+                });
+
             modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payments.PaymentAuditEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -293,6 +374,9 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
                         .HasColumnName("target_type");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Action", "AtUtc")
+                        .HasDatabaseName("ix_payment_audit_events_action");
 
                     b.HasIndex("CenterId", "AtUtc")
                         .HasDatabaseName("ix_payment_audit_events_center");
@@ -346,6 +430,10 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_user_id");
 
+                    b.Property<DateOnly?>("DigestSentOn")
+                        .HasColumnType("date")
+                        .HasColumnName("digest_sent_on");
+
                     b.Property<string>("EndpointKey")
                         .IsRequired()
                         .HasMaxLength(43)
@@ -385,6 +473,10 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("next_pull_at_utc");
 
+                    b.Property<DateTimeOffset?>("NextReconcileAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_reconcile_at_utc");
+
                     b.Property<string>("Provider")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -411,6 +503,18 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
                     b.Property<int>("PullRetryCount")
                         .HasColumnType("integer")
                         .HasColumnName("pull_retry_count");
+
+                    b.Property<Guid?>("ReconcileProcessingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reconcile_processing_id");
+
+                    b.Property<DateTimeOffset?>("ReconcileProcessingUntilUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reconcile_processing_until_utc");
+
+                    b.Property<DateTimeOffset?>("ReconcileRequestedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reconcile_requested_at_utc");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone")
@@ -504,6 +608,153 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ux_payment_webhook_deliveries_webhook");
 
                     b.ToTable("payment_webhook_deliveries", "finance");
+                });
+
+            modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payments.ReconciliationFinding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long?>("Amount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid?>("BankTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bank_transaction_id");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("center_id");
+
+                    b.Property<Guid?>("DeliveryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("delivery_id");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("detail");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid?>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("run_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunId")
+                        .HasDatabaseName("ix_payment_reconciliation_findings_run");
+
+                    b.ToTable("payment_reconciliation_findings", "finance");
+                });
+
+            modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payments.ReconciliationRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BookedReceiptTotal")
+                        .HasColumnType("bigint")
+                        .HasColumnName("booked_receipt_total");
+
+                    b.Property<long>("BookedTotal")
+                        .HasColumnType("bigint")
+                        .HasColumnName("booked_total");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("center_id");
+
+                    b.Property<int>("ChangedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("changed_count");
+
+                    b.Property<Guid>("ConfigId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("config_id");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("error");
+
+                    b.Property<long>("FailedTotal")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_total");
+
+                    b.Property<int>("FindingCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("finding_count");
+
+                    b.Property<DateTimeOffset>("FinishedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finished_at_utc");
+
+                    b.Property<long>("IgnoredTotal")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ignored_total");
+
+                    b.Property<long>("IncomingTotal")
+                        .HasColumnType("bigint")
+                        .HasColumnName("incoming_total");
+
+                    b.Property<int>("MissedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("missed_count");
+
+                    b.Property<long>("PendingTotal")
+                        .HasColumnType("bigint")
+                        .HasColumnName("pending_total");
+
+                    b.Property<int>("ScannedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("scanned_count");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at_utc");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("trigger");
+
+                    b.Property<DateTimeOffset>("WindowFromUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("window_from_utc");
+
+                    b.Property<DateTimeOffset>("WindowToUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("window_to_utc");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CenterId", "StartedAtUtc")
+                        .HasDatabaseName("ix_payment_reconciliation_runs_center");
+
+                    b.ToTable("payment_reconciliation_runs", "finance");
                 });
 
             modelBuilder.Entity("TutorManagement.Modules.Finance.Domain.Payroll.PayRate", b =>

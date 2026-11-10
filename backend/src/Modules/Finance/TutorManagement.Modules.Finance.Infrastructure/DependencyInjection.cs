@@ -21,6 +21,11 @@ public static class DependencyInjection
         services.AddScoped<PaymentProviderWorkflow>();
         services.AddScoped<FinanceSettingsWorkflow>();
         services.AddScoped<PaymentQueueWorkflow>();
+        services.AddScoped<PaymentPullStore>();
+        services.AddScoped<PaymentOpsStore>();
+        services.AddScoped<IPaymentOpsStore>(provider => provider.GetRequiredService<PaymentOpsStore>());
+        services.AddScoped<IPaymentOpsReader>(provider => provider.GetRequiredService<PaymentOpsStore>());
+        services.AddScoped<PaymentOpsWorkflow>();
         services.AddScoped<IPaymentWebhookStore, PaymentWebhookStore>();
         services.AddScoped<SepayWebhookReceiver>();
         services.AddSingleton(provider =>
@@ -51,10 +56,17 @@ public static class DependencyInjection
                 Timeout = TimeSpan.FromSeconds(20)
             },
             provider.GetRequiredService<SepayOptions>()));
-        services.AddScoped<IPaymentPullStore, PaymentPullStore>();
+        services.AddScoped<PaymentPullStore>();
+        services.AddScoped<IPaymentPullStore>(provider => provider.GetRequiredService<PaymentPullStore>());
         services.AddScoped<PaymentFetcher>();
         services.AddScoped<IPaymentBookingStore, PaymentBookingStore>();
         services.AddScoped<PaymentBooker>();
+        // Đợt 5: nightly reconciliation, D10 alerts and the morning digest.
+        services.AddScoped<PaymentOpsStore>();
+        services.AddScoped<IPaymentOpsStore>(provider => provider.GetRequiredService<PaymentOpsStore>());
+        services.AddScoped<PaymentAlertBook>();
+        services.AddScoped<PaymentReconciler>();
+        services.AddScoped<PaymentMonitor>();
         return services;
     }
 

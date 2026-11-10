@@ -181,5 +181,12 @@ public sealed class PaymentBooker(IPaymentBookingStore store, ITuitionAcademicsR
         return rows.Count;
     }
 
-    private static string Describe(Exception error) => $"{error.GetType().Name}: {error.Message}";
+    /// <summary>With the inner messages, so a unique conflict on receipts (Đợt 5 alert) is visible by constraint name.</summary>
+    private static string Describe(Exception error)
+    {
+        var parts = new List<string>();
+        for (var current = error; current is not null && parts.Count < 4; current = current.InnerException)
+            parts.Add($"{current.GetType().Name}: {current.Message}");
+        return string.Join(" → ", parts);
+    }
 }

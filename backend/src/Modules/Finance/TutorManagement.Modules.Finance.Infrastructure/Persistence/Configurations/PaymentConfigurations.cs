@@ -32,6 +32,11 @@ public sealed class PaymentProviderConfigConfiguration : IEntityTypeConfiguratio
         builder.Property(x => x.LastPullError).HasColumnName("last_pull_error").HasMaxLength(500);
         builder.Property(x => x.InvalidSignatureCount).HasColumnName("invalid_signature_count");
         builder.Property(x => x.LastInvalidSignatureAtUtc).HasColumnName("last_invalid_signature_at_utc");
+        builder.Property(x => x.NextReconcileAtUtc).HasColumnName("next_reconcile_at_utc");
+        builder.Property(x => x.ReconcileProcessingId).HasColumnName("reconcile_processing_id");
+        builder.Property(x => x.ReconcileProcessingUntilUtc).HasColumnName("reconcile_processing_until_utc");
+        builder.Property(x => x.ReconcileRequestedAtUtc).HasColumnName("reconcile_requested_at_utc");
+        builder.Property(x => x.DigestSentOn).HasColumnName("digest_sent_on");
         builder.Property(x => x.Version).HasColumnName("version").IsConcurrencyToken();
         builder.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id");
         builder.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc");
@@ -46,6 +51,80 @@ public sealed class PaymentProviderConfigConfiguration : IEntityTypeConfiguratio
         builder.HasIndex(x => new { x.BankBin, x.AccountNumber }).IsUnique().HasFilter("mode = 'Auto'")
             .HasDatabaseName("ux_payment_provider_configs_auto_account");
         builder.HasIndex(x => x.NextPullAtUtc).HasFilter("mode <> 'Off'").HasDatabaseName("ix_payment_provider_configs_due");
+    }
+}
+
+public sealed class ReconciliationRunConfiguration : IEntityTypeConfiguration<ReconciliationRun>
+{
+    public void Configure(EntityTypeBuilder<ReconciliationRun> builder)
+    {
+        builder.ToTable("payment_reconciliation_runs");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasColumnName("id");
+        builder.Property(x => x.CenterId).HasColumnName("center_id");
+        builder.Property(x => x.ConfigId).HasColumnName("config_id");
+        builder.Property(x => x.Trigger).HasColumnName("trigger").HasConversion<string>().HasMaxLength(16);
+        builder.Property(x => x.WindowFromUtc).HasColumnName("window_from_utc");
+        builder.Property(x => x.WindowToUtc).HasColumnName("window_to_utc");
+        builder.Property(x => x.StartedAtUtc).HasColumnName("started_at_utc");
+        builder.Property(x => x.FinishedAtUtc).HasColumnName("finished_at_utc");
+        builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(16);
+        builder.Property(x => x.Error).HasColumnName("error").HasMaxLength(ReconciliationRun.MaxErrorLength);
+        builder.Property(x => x.ScannedCount).HasColumnName("scanned_count");
+        builder.Property(x => x.MissedCount).HasColumnName("missed_count");
+        builder.Property(x => x.ChangedCount).HasColumnName("changed_count");
+        builder.Property(x => x.IncomingTotal).HasColumnName("incoming_total");
+        builder.Property(x => x.BookedTotal).HasColumnName("booked_total");
+        builder.Property(x => x.BookedReceiptTotal).HasColumnName("booked_receipt_total");
+        builder.Property(x => x.PendingTotal).HasColumnName("pending_total");
+        builder.Property(x => x.FailedTotal).HasColumnName("failed_total");
+        builder.Property(x => x.IgnoredTotal).HasColumnName("ignored_total");
+        builder.Property(x => x.FindingCount).HasColumnName("finding_count");
+        builder.HasIndex(x => new { x.CenterId, x.StartedAtUtc }).HasDatabaseName("ix_payment_reconciliation_runs_center");
+    }
+}
+
+public sealed class ReconciliationFindingConfiguration : IEntityTypeConfiguration<ReconciliationFinding>
+{
+    public void Configure(EntityTypeBuilder<ReconciliationFinding> builder)
+    {
+        builder.ToTable("payment_reconciliation_findings");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasColumnName("id");
+        builder.Property(x => x.RunId).HasColumnName("run_id");
+        builder.Property(x => x.CenterId).HasColumnName("center_id");
+        builder.Property(x => x.Kind).HasColumnName("kind").HasMaxLength(FindingKinds.MaxLength);
+        builder.Property(x => x.BankTransactionId).HasColumnName("bank_transaction_id");
+        builder.Property(x => x.ReceiptId).HasColumnName("receipt_id");
+        builder.Property(x => x.DeliveryId).HasColumnName("delivery_id");
+        builder.Property(x => x.Amount).HasColumnName("amount");
+        builder.Property(x => x.Detail).HasColumnName("detail").HasMaxLength(ReconciliationFinding.MaxDetailLength);
+        builder.HasIndex(x => x.RunId).HasDatabaseName("ix_payment_reconciliation_findings_run");
+    }
+}
+
+public sealed class PaymentAlertConfiguration : IEntityTypeConfiguration<PaymentAlert>
+{
+    public void Configure(EntityTypeBuilder<PaymentAlert> builder)
+    {
+        builder.ToTable("payment_alerts");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasColumnName("id");
+        builder.Property(x => x.CenterId).HasColumnName("center_id");
+        builder.Property(x => x.Fingerprint).HasColumnName("fingerprint").HasMaxLength(PaymentAlert.MaxFingerprintLength);
+        builder.Property(x => x.Kind).HasColumnName("kind").HasMaxLength(AlertKinds.MaxLength);
+        builder.Property(x => x.Title).HasColumnName("title").HasMaxLength(PaymentAlert.MaxTitleLength);
+        builder.Property(x => x.Detail).HasColumnName("detail").HasMaxLength(PaymentAlert.MaxDetailLength);
+        builder.Property(x => x.State).HasColumnName("state").HasConversion<string>().HasMaxLength(16);
+        builder.Property(x => x.Metric).HasColumnName("metric");
+        builder.Property(x => x.FirstSeenAtUtc).HasColumnName("first_seen_at_utc");
+        builder.Property(x => x.LastSeenAtUtc).HasColumnName("last_seen_at_utc");
+        builder.Property(x => x.LastEmailedAtUtc).HasColumnName("last_emailed_at_utc");
+        builder.Property(x => x.ResolvedAtUtc).HasColumnName("resolved_at_utc");
+        builder.Property(x => x.AcknowledgedByUserId).HasColumnName("acknowledged_by_user_id");
+        builder.Property(x => x.AcknowledgedAtUtc).HasColumnName("acknowledged_at_utc");
+        builder.HasIndex(x => new { x.CenterId, x.Fingerprint }).IsUnique().HasDatabaseName("ux_payment_alerts_fingerprint");
+        builder.HasIndex(x => new { x.CenterId, x.State }).HasDatabaseName("ix_payment_alerts_state");
     }
 }
 
@@ -148,5 +227,7 @@ public sealed class PaymentAuditEventConfiguration : IEntityTypeConfiguration<Pa
         builder.Property(x => x.AfterJson).HasColumnName("after_json").HasColumnType("jsonb");
         builder.Property(x => x.AtUtc).HasColumnName("at_utc");
         builder.HasIndex(x => new { x.CenterId, x.AtUtc }).HasDatabaseName("ix_payment_audit_events_center");
+        // Đợt 5: the minute monitor reads provider events by action.
+        builder.HasIndex(x => new { x.Action, x.AtUtc }).HasDatabaseName("ix_payment_audit_events_action");
     }
 }

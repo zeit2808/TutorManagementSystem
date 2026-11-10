@@ -9,7 +9,9 @@ namespace TutorManagement.Modules.Finance.Application.Payments;
 public sealed record BankFeedQuery(string? SinceId, DateTimeOffset? FromUtc, int Page, int PerPage);
 
 /// <summary>Transactions in the provider's order (newest first), both directions.</summary>
-public sealed record BankFeedPage(IReadOnlyList<ReceivedBankTransaction> Transactions, bool HasMore);
+/// <param name="UnknownFields">Field names the parser does not know (Đợt 5: reported to the owner once each).</param>
+public sealed record BankFeedPage(IReadOnlyList<ReceivedBankTransaction> Transactions, bool HasMore,
+    IReadOnlyCollection<string>? UnknownFields = null);
 
 /// <summary>The provider's transaction API (docs/THANH-TOAN-QR-KE-HOACH.md, T1). The only source that books money.</summary>
 public interface IBankFeedProvider

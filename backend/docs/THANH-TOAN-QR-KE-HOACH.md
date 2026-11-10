@@ -473,6 +473,20 @@ Chia thành các PR nhỏ, theo thứ tự:
 
 **Xong khi:** báo cáo tổng khớp trên dữ liệu thật nhiều ngày, cảnh báo bắn đúng khi giả lập lỗi.
 
+**Chốt (10/11/2026):** chia 5a (backend: đối soát, K17, cảnh báo) và 5b (bộ chỉ số, màn báo cáo, tài liệu hướng dẫn). Quét lúc **02:00** giờ Việt Nam. Mỗi cảnh báo email **một lần** khi mở; còn mở thì nhắc trong **email tổng hợp 07:00** mỗi sáng cho đến khi hết. Kết quả mỗi lần đối soát **lưu mãi** (T13).
+
+**5a backend (xong 10/11/2026):**
+
+- `payment_reconciliation_runs` + `payment_reconciliation_findings`: mỗi lần đối soát một dòng, kèm tổng K17 của cửa sổ (tiền vào = đã ghi + đang chờ + lỗi + bỏ qua; đã ghi = Σ biên lai còn hiệu lực).
+- Mỗi đêm 02:00 (hoặc khi Chủ bấm `POST .../payment-provider/reconciliations`): đọc lại 3 ngày từ SePay **không dùng `since_id`**, cách trang 700 ms, chờ lại khi bị 429; lưu qua đúng hai khoá của bước Kéo (không đụng con trỏ kéo). Kiểm tra trên dữ liệu đã lưu (toàn bộ lịch sử, chạy cả khi SePay lỗi): `Booked` không có biên lai; biên lai chuyển khoản gắn giao dịch chưa `Booked` hoặc biên lai `Auto` không có giao dịch; biên lai lệch số tiền với giao dịch; biên lai trừ nợ quá số tiền; webhook ký đúng có mã ngân hàng mà quá 1 giờ API không có (bỏ qua tiền ra); tổng `Booked` ≠ tổng biên lai. Thêm từ lần quét: giao dịch kéo 5 phút bỏ lỡ (`MissedByPull`), SePay đổi dữ liệu (`ChangedAfterStore`, K19).
+- `payment_alerts`: một dòng cho mỗi (trung tâm, dấu vân tay); chèn-hoặc-mở-lại là một câu SQL nên hai Worker không gửi trùng email. Trạng thái `Open` → `Acknowledged` (Chủ đánh dấu đã xem, `POST .../alerts/{id}/acknowledge`) → `Resolved` (tự đóng khi hết, mở lại và email lại nếu quay lại). Loại "dữ liệu SePay" (bỏ lỡ, đổi dữ liệu, trường lạ) không tự đóng, chờ Chủ xem.
+- Theo dõi mỗi phút (D10): giao dịch `Failed`; SePay lỗi quá 1 giờ; ≥ 5 webhook sai chữ ký trong 1 giờ (đóng sau 24 giờ yên); giao dịch `Received` quá 10 phút ở chế độ Tự động; đụng unique ở `receipts` (nhận theo tên ràng buộc trong lỗi); SePay đổi dữ liệu giao dịch đã ghi; trường mới trong API SePay (danh sách 15 trường đã đo trên sandbox).
+- Email tổng hợp 07:00: hàng chờ tồn quá 24 giờ và mọi cảnh báo còn mở; mỗi trung tâm một lần mỗi ngày (đánh dấu trong cùng transaction với email).
+- Worker riêng `PaymentOpsWorker` (30 giây một vòng), để quét 3 ngày không làm chậm kéo và ghi sổ.
+- API: `GET .../payment-provider/reconciliations`, `GET .../reconciliations/{id}`, `GET .../alerts?state=Open|Acknowledged|Resolved|All` (Chủ, QL); `POST .../reconciliations`, `POST .../alerts/{id}/acknowledge` (Chủ).
+- Test Postgres thật: đủ bảy loại phát hiện trên một sổ bị làm hỏng có chủ đích, một email cho cả bảy, chạy lại không email lại, sửa xong thì đóng, đã xem thì im, SePay sập vẫn kiểm tra sổ, năm cảnh báo theo dõi, mở lại khi lỗi quay lại, email tổng hợp mỗi ngày một lần.
+- Còn 5b: bộ chỉ số, màn "Đối soát và cảnh báo" ở frontend, tài liệu hướng dẫn trung tâm tự kết nối.
+
 ### Kiểm thử xuyên suốt
 - Unit: chuỗi VietQR và CRC, mã kiểm tra, parser, bộ khớp, gom chuông, token bucket.
 - Tích hợp Postgres thật theo mẫu `RealPostgresTuitionTests.cs`: kéo lặp, kéo song song hai worker, huỷ rồi gán lại, hồ sơ gộp, lô có dòng hỏng, checksum đổi.
