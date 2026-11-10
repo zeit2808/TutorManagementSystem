@@ -76,6 +76,13 @@ public sealed class PaymentProviderConfig : Entity<Guid>
     public string? LastPullError { get; private set; }
     public long InvalidSignatureCount { get; private set; }
     public DateTimeOffset? LastInvalidSignatureAtUtc { get; private set; }
+
+    // Đợt 5, written by the Worker with plain SQL under a lease: the nightly reconciliation and the morning digest.
+    public DateTimeOffset? NextReconcileAtUtc { get; private set; }
+    public Guid? ReconcileProcessingId { get; private set; }
+    public DateTimeOffset? ReconcileProcessingUntilUtc { get; private set; }
+    public DateTimeOffset? ReconcileRequestedAtUtc { get; private set; }
+    public DateOnly? DigestSentOn { get; private set; }
     public int Version { get; private set; }
     public Guid CreatedByUserId { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }

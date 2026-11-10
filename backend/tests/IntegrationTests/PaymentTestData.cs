@@ -32,6 +32,9 @@ internal sealed class PaymentTestData(string connectionString) : IAsyncDisposabl
         await using var transaction = await connection.BeginTransactionAsync();
         await using var command = new NpgsqlCommand("""
             DELETE FROM finance.payment_audit_events WHERE center_id = ANY(@centers);
+            DELETE FROM finance.payment_alerts WHERE center_id = ANY(@centers);
+            DELETE FROM finance.payment_reconciliation_findings WHERE center_id = ANY(@centers);
+            DELETE FROM finance.payment_reconciliation_runs WHERE center_id = ANY(@centers);
             UPDATE finance.bank_transactions SET duplicate_of_id = NULL WHERE center_id = ANY(@centers);
             DELETE FROM finance.bank_transactions WHERE center_id = ANY(@centers);
             DELETE FROM finance.payment_webhook_deliveries

@@ -35,6 +35,14 @@ public sealed class SepayBankFeed(HttpClient http, SepayOptions options) : IBank
     public const string UserAgent = "TutorManagement/1.0";
     private static readonly TimeZoneInfo Vietnam = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
 
+    /// <summary>Every field SePay API v2 sent on the sandbox (10/11/2026). A new one is reported to the owner once.</summary>
+    internal static readonly HashSet<string> KnownFields = new(StringComparer.Ordinal)
+    {
+        "id", "bank_brand_name", "account_number", "transaction_date", "amount_out", "amount_in", "accumulated",
+        "transaction_content", "reference_number", "code", "bank_account_id", "va", "va_id", "transfer_type",
+        "webhook_success"
+    };
+
     public PaymentProvider Provider => PaymentProvider.Sepay;
 
     public async Task<BankFeedPage> ListAsync(string apiToken, BankFeedQuery query, CancellationToken token)
@@ -88,10 +96,13 @@ public sealed class SepayBankFeed(HttpClient http, SepayOptions options) : IBank
                 data.ValueKind != JsonValueKind.Array)
                 throw new BankFeedException("SePay answered without a data list.", false);
             var items = data.EnumerateArray().Select(Transaction).ToArray();
+            var unknown = data.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Object)
+                .SelectMany(x => x.EnumerateObject().Select(p => p.Name)).Where(x => !KnownFields.Contains(x))
+                .Distinct(StringComparer.Ordinal).ToArray();
             var hasMore = root.TryGetProperty("meta", out var meta) && meta.ValueKind == JsonValueKind.Object &&
                           meta.TryGetProperty("pagination", out var page) && page.ValueKind == JsonValueKind.Object &&
                           page.TryGetProperty("has_more", out var more) && more.ValueKind == JsonValueKind.True;
-            return new BankFeedPage(items, hasMore);
+            return new BankFeedPage(items, hasMore, unknown);
         }
     }
 
