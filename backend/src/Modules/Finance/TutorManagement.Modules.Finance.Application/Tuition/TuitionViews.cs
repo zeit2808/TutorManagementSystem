@@ -43,7 +43,7 @@ internal static class TuitionViews
             StudentCode = student?.Code ?? string.Empty, StudentName = student?.FullName ?? string.Empty,
             PayerName = x.PayerName, Method = x.Method.ToString(), Amount = x.Amount, Allocated = x.Allocated,
             Credit = x.IsVoided ? 0 : x.Unallocated, ReceivedOn = x.ReceivedOn, Note = x.Note, CreatedAtUtc = x.CreatedAtUtc,
-            Source = x.Source.ToString(),
+            Source = x.Source.ToString(), BankTransactionId = x.BankTransactionId,
             CreatedByName = x.CreatedByUserId == SystemActors.PaymentFeed ? "Tự động (SePay)" : names.GetValueOrDefault(x.CreatedByUserId),
             VoidedAtUtc = x.VoidedAtUtc,
             VoidedByName = x.VoidedByUserId is { } voider ? names.GetValueOrDefault(voider) : null, VoidReason = x.VoidReason,

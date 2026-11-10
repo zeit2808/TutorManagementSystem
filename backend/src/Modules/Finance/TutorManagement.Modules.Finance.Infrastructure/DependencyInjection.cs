@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<PaymentIntentWorkflow>();
         services.AddScoped<PaymentProviderWorkflow>();
         services.AddScoped<FinanceSettingsWorkflow>();
+        services.AddScoped<PaymentQueueWorkflow>();
         services.AddScoped<IPaymentWebhookStore, PaymentWebhookStore>();
         services.AddScoped<SepayWebhookReceiver>();
         services.AddSingleton(provider =>

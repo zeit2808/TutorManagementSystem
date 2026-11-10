@@ -89,6 +89,17 @@ public interface ITuitionStore
     Task<IReadOnlyList<Domain.Payments.BankTransaction>> ListBankTransactionsAsync(Guid centerId, DateTimeOffset fromUtc,
         DateTimeOffset toUtc, CancellationToken token);
 
+    /// <summary>Untracked page of the center's transfers, newest first; <paramref name="statuses"/> null means every status.</summary>
+    Task<(IReadOnlyList<Domain.Payments.BankTransaction> Items, int Total)> ListBankTransfersPageAsync(Guid centerId,
+        IReadOnlyCollection<Domain.Payments.BankTransactionStatus>? statuses, int page, int pageSize, CancellationToken token);
+
+    /// <summary>Untracked: QR codes of the center still waiting for money.</summary>
+    Task<IReadOnlyList<PaymentIntent>> ListPendingIntentsOfCenterAsync(Guid centerId, CancellationToken token);
+
+    /// <summary>The live receipt (id, number) of each transfer that has one.</summary>
+    Task<IReadOnlyDictionary<Guid, (Guid Id, int Number)>> ListLiveReceiptsOfTransfersAsync(IReadOnlyCollection<Guid> transferIds,
+        CancellationToken token);
+
     /// <summary>Tracked: the bank transfer a receipt was made from.</summary>
     Task<Domain.Payments.BankTransaction?> FindBankTransactionAsync(Guid id, CancellationToken token);
 

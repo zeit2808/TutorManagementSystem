@@ -11,6 +11,9 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Repositorie
 /// <summary>Inbox reads and lease-guarded writes for the booker; plain SQL so staff edits and the Worker never collide.</summary>
 public sealed class PaymentBookingStore(FinanceDbContext db) : IPaymentBookingStore
 {
+    /// <summary>After this many failures a transfer is Failed: the owner is told and retries it by hand.</summary>
+    public const int MaxAttempts = 5;
+
     private static readonly TimeSpan[] Backoff =
         [TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(60)];
 
@@ -121,7 +124,8 @@ public sealed class PaymentBookingStore(FinanceDbContext db) : IPaymentBookingSt
         await db.Database.ExecuteSqlInterpolatedAsync($"""
             UPDATE finance.bank_transactions
             SET attempt_count = attempt_count + 1, last_error = {message}, next_attempt_at_utc = {next.ToUniversalTime()},
-                processing_id = NULL, processing_until_utc = NULL
+                processing_id = NULL, processing_until_utc = NULL,
+                status = CASE WHEN attempt_count + 1 >= {MaxAttempts} THEN 'Failed' ELSE status END
             WHERE id = {transactionId} AND processing_id = {leaseId}
             """, token);
     }

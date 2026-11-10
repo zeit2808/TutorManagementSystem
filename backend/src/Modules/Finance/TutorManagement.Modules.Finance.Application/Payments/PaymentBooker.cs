@@ -102,6 +102,7 @@ public sealed class PaymentBooker(IPaymentBookingStore store, ITuitionAcademicsR
         var tracked = (await store.LoadIntentsTrackedAsync(centerId, intents.Select(x => x.Id).ToArray(), token))
             .ToDictionary(x => x.Id);
 
+        var booked = new List<Domain.Tuition.Receipt>();
         foreach (var row in rows.OrderBy(x => x.TransactedAtUtc))
         {
             // K21: before Auto was switched on, staff recorded transfers by hand.
@@ -127,6 +128,7 @@ public sealed class PaymentBooker(IPaymentBookingStore store, ITuitionAcademicsR
                     ledger.Spread(receipt, first.Where(open.Contains).ToArray(), now);
                     if (decision.IntentId is { } paid && tracked.TryGetValue(paid, out var paidIntent)) paidIntent.MarkPaid(now);
                     row.MarkBooked(studentId, decision.IntentId, now);
+                    booked.Add(receipt);
                     break;
                 case MatchKind.Review:
                     row.SendToReview(decision.Review!.Value);
@@ -136,6 +138,8 @@ public sealed class PaymentBooker(IPaymentBookingStore store, ITuitionAcademicsR
                     break;
             }
         }
+        // D6: the confirmation is queued with the receipts, so it is sent only if they commit.
+        await PaymentEmails.QueueAsync(tuition, academics, ledger, booked, token);
         await TuitionWorkflow.PersistAsync(ledger, tuition, token);
         await guard.CommitAsync(token);
     }

@@ -455,6 +455,15 @@ Chia thành các PR nhỏ, theo thứ tự:
 
 **Xong khi:** mọi giao dịch đều có đường xử lý, không còn cách ghi trùng.
 
+**4a backend (xong 10/11/2026):**
+
+- `GET centers/{c}/bank-transactions?status=Queue|NeedsReview|Held|Failed|Received|Booked|Ignored|All` (Chủ, QL, NV): kèm gợi ý học sinh (D1) — mã QR đang chờ đúng số tiền, nội dung lệch 1 ký tự so với một mã QR, mã học sinh trong nội dung kể cả bị tách. Không bao giờ tự gán.
+- `POST .../{id}/assign` (Chủ, QL, NV): tạo biên lai nguồn `Manual` gắn với giao dịch, phân bổ các khoản được chọn trước; hai người gán cùng lúc thì chỉ một người thành công (version + unique).
+- `POST .../{id}/ignore` (Chủ, QL, bắt buộc lý do) → `Ignored` (`NotTuition`); `POST .../{id}/resolve-held` (Chủ) → bản trùng hoặc giao dịch riêng; `POST .../{id}/retry` (Chủ) cho giao dịch `Failed`. Lỗi 5 lần liên tiếp → `Failed`.
+- Huỷ biên lai → giao dịch về hàng chờ, gán lại được cho học sinh khác; `ReceiptDto.bankTransactionId` cho frontend biết.
+- D6: email "Đã nhận học phí" (số tiền, số biên lai, còn nợ hoặc số dư) xếp trong cùng transaction khi máy tự ghi và khi nhân viên gán, gửi tới email tài khoản học sinh.
+- Còn 4b (frontend): màn Kết nối SePay, Báo cáo Shadow, "Tiền chưa rõ của ai", nhãn nguồn biên lai, mã lỗi mới.
+
 ### Đợt 5 — Đối soát và vận hành
 - Quét 3 ngày mỗi đêm và báo cáo đối soát, so bốn lớp: SePay ↔ `bank_transactions` ↔ biên lai ↔ phân bổ. Phát hiện: SePay có mà mình thiếu; webhook ký đúng mà API không có giao dịch tương ứng; `Booked` mà không có biên lai còn hiệu lực; biên lai `Auto` không có giao dịch; tổng K17 lệch.
 - Bộ chỉ số: chuông theo giờ, tỉ lệ chuông gửi lại (`delivery_count > 1`), chuông sai chữ ký, chuông mà API không có gì mới, giao dịch thấy lại (`seen_count > 1`), số dòng theo trạng thái, số cập nhật có điều kiện bị từ chối, số lần đụng unique ở `receipts`, số lần thử lại thủ công, tuổi dòng `Received` cũ nhất, độ trễ chuyển tiền → biên lai.

@@ -71,6 +71,36 @@ public sealed class TuitionStore(FinanceDbContext db, IClock clock, IServiceProv
 
     public void Detach() => db.ChangeTracker.Clear();
 
+    public async Task<(IReadOnlyList<Domain.Payments.BankTransaction> Items, int Total)> ListBankTransfersPageAsync(Guid centerId,
+        IReadOnlyCollection<Domain.Payments.BankTransactionStatus>? statuses, int page, int pageSize, CancellationToken token)
+    {
+        var query = db.BankTransactions.AsNoTracking().Where(x => x.CenterId == centerId);
+        if (statuses is not null)
+        {
+            var wanted = statuses.ToArray();
+            query = query.Where(x => wanted.Contains(x.Status));
+        }
+        var total = await query.CountAsync(token);
+        var items = await query.OrderByDescending(x => x.TransactedAtUtc).ThenBy(x => x.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToArrayAsync(token);
+        return (items, total);
+    }
+
+    public async Task<IReadOnlyList<PaymentIntent>> ListPendingIntentsOfCenterAsync(Guid centerId, CancellationToken token) =>
+        await db.PaymentIntents.AsNoTracking()
+            .Where(x => x.CenterId == centerId && x.Status == PaymentIntentStatus.Pending).ToArrayAsync(token);
+
+    public async Task<IReadOnlyDictionary<Guid, (Guid Id, int Number)>> ListLiveReceiptsOfTransfersAsync(
+        IReadOnlyCollection<Guid> transferIds, CancellationToken token)
+    {
+        var ids = transferIds.ToArray();
+        if (ids.Length == 0) return new Dictionary<Guid, (Guid, int)>();
+        var rows = await db.Receipts.AsNoTracking()
+            .Where(x => x.BankTransactionId != null && ids.Contains(x.BankTransactionId.Value) && x.VoidedAtUtc == null)
+            .Select(x => new { Transfer = x.BankTransactionId!.Value, x.Id, x.Number }).ToListAsync(token);
+        return rows.ToDictionary(x => x.Transfer, x => (x.Id, x.Number));
+    }
+
     public async Task<IReadOnlyList<Domain.Payments.BankTransaction>> ListBankTransactionsAsync(Guid centerId,
         DateTimeOffset fromUtc, DateTimeOffset toUtc, CancellationToken token) =>
         await db.BankTransactions.AsNoTracking()

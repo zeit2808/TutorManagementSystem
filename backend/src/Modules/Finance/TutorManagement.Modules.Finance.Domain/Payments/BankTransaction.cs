@@ -201,6 +201,59 @@ public sealed class BankTransaction : Entity<Guid>
         Finish();
     }
 
+    /// <summary>A person said whose money it is (Đợt 4); the receipt is made in the same transaction.</summary>
+    public void AssignManually(Guid studentId, DateTimeOffset now)
+    {
+        RequireStatus(BankTransactionStatus.NeedsReview);
+        if (studentId == Guid.Empty) throw new ArgumentException("A student is required.", nameof(studentId));
+        Status = BankTransactionStatus.Booked;
+        StudentId = studentId;
+        BookedAtUtc = now;
+        ReviewReason = null;
+        Version++;
+    }
+
+    /// <summary>The owner or a manager decided it is not tuition; the reason is in the audit trail.</summary>
+    public void IgnoreByPerson()
+    {
+        if (Status is not (BankTransactionStatus.NeedsReview or BankTransactionStatus.Failed))
+            throw new InvalidOperationException($"The transaction is {Status}.");
+        Status = BankTransactionStatus.Ignored;
+        IgnoreReason = Payments.IgnoreReason.NotTuition;
+        ProcessingId = null;
+        ProcessingUntilUtc = null;
+        Version++;
+    }
+
+    /// <summary>
+    /// The owner compared a held copy with the bank statement: the same money twice from SePay (duplicate), or a second,
+    /// real transfer that happens to carry the same bank reference (then it is handled like any new transfer).
+    /// </summary>
+    public void ResolveHeld(bool isDuplicate)
+    {
+        RequireStatus(BankTransactionStatus.Held);
+        if (isDuplicate)
+        {
+            Status = BankTransactionStatus.Ignored;
+            IgnoreReason = Payments.IgnoreReason.Duplicate;
+        }
+        else Status = BankTransactionStatus.Received;
+        Version++;
+    }
+
+    /// <summary>After the cause of repeated failures was fixed: try again from the start.</summary>
+    public void Retry()
+    {
+        RequireStatus(BankTransactionStatus.Failed);
+        Status = BankTransactionStatus.Received;
+        AttemptCount = 0;
+        NextAttemptAtUtc = null;
+        LastError = null;
+        ProcessingId = null;
+        ProcessingUntilUtc = null;
+        Version++;
+    }
+
     /// <summary>Its receipt was voided: the money goes back to the queue (K16).</summary>
     public void ReturnAfterVoid()
     {
