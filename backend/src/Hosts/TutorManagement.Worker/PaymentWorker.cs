@@ -3,7 +3,7 @@ using TutorManagement.Modules.Finance.Application.Payments;
 namespace TutorManagement.Worker;
 
 /// <summary>
-/// Pulls bank transactions (docs/THANH-TOAN-QR-KE-HOACH.md, Round 2e). Its own BackgroundService so a slow bank feed
+/// Pulls bank transactions (docs/THANH-TOAN-QR-KE-HOACH.md, Round 2e) and evaluates them for Shadow centers (Round 3a). Its own BackgroundService so a slow bank feed
 /// never delays email delivery or billing, and the other way round. Polls every second; work is leased in the
 /// database, so several Workers can run.
 /// </summary>
@@ -19,8 +19,14 @@ public sealed partial class PaymentWorker(IServiceScopeFactory scopeFactory, ILo
             var pulled = 0;
             try
             {
-                await using var scope = scopeFactory.CreateAsyncScope();
-                pulled = await scope.ServiceProvider.GetRequiredService<PaymentFetcher>().RunOnceAsync(BatchSize, stoppingToken);
+                await using (var scope = scopeFactory.CreateAsyncScope())
+                    pulled = await scope.ServiceProvider.GetRequiredService<PaymentFetcher>().RunOnceAsync(BatchSize, stoppingToken);
+                // Round 3a: what Shadow centers would book, written next to each pulled transfer.
+                await using (var scope = scopeFactory.CreateAsyncScope())
+                    pulled += await scope.ServiceProvider.GetRequiredService<PaymentBooker>().RunShadowOnceAsync(BatchSize * 5, stoppingToken);
+                // Round 3b: Auto centers get their receipts.
+                await using (var scope = scopeFactory.CreateAsyncScope())
+                    pulled += await scope.ServiceProvider.GetRequiredService<PaymentBooker>().RunAutoOnceAsync(BatchSize * 5, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

@@ -8,6 +8,20 @@ public enum PaymentMethod
     BankTransfer = 2
 }
 
+/// <summary>Manual: recorded or assigned by a person. Auto: booked by the bank feed (docs/THANH-TOAN-QR-KE-HOACH.md).</summary>
+public enum ReceiptSource
+{
+    Manual = 1,
+    Auto = 2
+}
+
+/// <summary>Who stands behind records the system makes on its own.</summary>
+public static class SystemActors
+{
+    /// <summary>The bank feed: receipts it books show this as their creator.</summary>
+    public static readonly Guid PaymentFeed = new("5e9a7f00-0000-4000-8000-00000000fee0");
+}
+
 /// <summary>
 /// H10–H12: money received from one student, numbered per center. The amount is spread over that student's charges;
 /// whatever is not spread is the student's credit and is spread over charges billed later. Voiding never deletes.
@@ -46,6 +60,9 @@ public sealed class Receipt : Entity<Guid>
     public string? Note { get; private set; }
     /// <summary>Client-chosen id so a double click records one receipt.</summary>
     public Guid? RequestId { get; private set; }
+    /// <summary>The bank transfer this receipt records, if it came from the bank feed or was assigned from it.</summary>
+    public Guid? BankTransactionId { get; private set; }
+    public ReceiptSource Source { get; private set; } = ReceiptSource.Manual;
     public Guid CreatedByUserId { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public DateTimeOffset? VoidedAtUtc { get; private set; }
@@ -72,6 +89,22 @@ public sealed class Receipt : Entity<Guid>
             throw new ArgumentException("Receipt details are invalid.");
         return new(centerId, number, studentId, Blank(payerName), method, amount, receivedOn, Blank(note), requestId,
             createdByUserId, now);
+    }
+
+    /// <summary>
+    /// A receipt for one bank transfer. The database allows one live receipt per transfer, and one Auto receipt per
+    /// transfer ever, so a replay can never book it again after a person voided it.
+    /// </summary>
+    public static Receipt CreateFromBank(Guid centerId, int number, Guid studentId, long amount, DateOnly receivedOn,
+        string? note, Guid bankTransactionId, ReceiptSource source, Guid createdByUserId, DateTimeOffset now)
+    {
+        if (bankTransactionId == Guid.Empty || !Enum.IsDefined(source))
+            throw new ArgumentException("The bank transaction is required.", nameof(bankTransactionId));
+        var receipt = Create(centerId, number, studentId, null, PaymentMethod.BankTransfer, amount, receivedOn, note, null,
+            createdByUserId, now);
+        receipt.BankTransactionId = bankTransactionId;
+        receipt.Source = source;
+        return receipt;
     }
 
     /// <summary>Spreads up to <paramref name="wanted"/> over one charge; returns what was actually spread.</summary>

@@ -43,9 +43,9 @@ public static class PaymentErrors
     public const int MaxSecretLength = 256;
     public const int MaxTokenLength = 512;
 
-    public static readonly Error InvalidMode = new("validation_error", "mode must be Off or Shadow.", "mode");
+    public static readonly Error InvalidMode = new("validation_error", "mode must be Off, Shadow or Auto.", "mode");
     public static readonly Error AutoNotAvailable = new("payment_auto_not_available",
-        "Automatic booking is not available yet; use Shadow to collect transactions.", "mode");
+        "Switch to Shadow first and compare its results with the receipts staff record; Auto can only follow Shadow.", "mode");
     public static readonly Error InvalidWebhookSecret = new("validation_error",
         $"webhookSecret must be {MinSecretLength}–{MaxSecretLength} characters without spaces.", "webhookSecret");
     public static readonly Error InvalidApiToken = new("validation_error",
@@ -59,6 +59,7 @@ public static class PaymentErrors
         "currentPassword");
     public static readonly Error TokenInUse = new("payment_token_in_use",
         "This SePay API token is already connected to another center.", "apiToken");
+    public static readonly Error InvalidReportRange = new("validation_error", "to must be on or after from, at most 93 days later.", "to");
     public static readonly Error NotPulling = new("payment_not_pulling",
         "SePay is not connected, or it is Off; connect it in Shadow mode first.");
     public static readonly Error ConfigVersion = new("tuition_concurrent_change",
@@ -68,7 +69,7 @@ public static class PaymentErrors
 /// <summary>
 /// The owner connects the center's SePay account (docs/THANH-TOAN-QR-KE-HOACH.md, Round 2c, D7):
 /// password asked again, every change audited and emailed to all owners, secrets stored encrypted and never shown.
-/// Only Off and Shadow can be chosen until booking exists (Round 3).
+/// Auto can only follow Shadow (Round 3b).
 /// </summary>
 public sealed class PaymentProviderWorkflow(
     ITuitionStore store,
@@ -99,7 +100,6 @@ public sealed class PaymentProviderWorkflow(
             case nameof(PaymentProviderMode.Auto): wanted = PaymentProviderMode.Auto; break;
             default: return Result<PaymentProviderDto>.Failure(PaymentErrors.InvalidMode);
         }
-        if (wanted == PaymentProviderMode.Auto) return Result<PaymentProviderDto>.Failure(PaymentErrors.AutoNotAvailable);
         var secret = Clean(webhookSecret);
         var apiKey = Clean(apiToken);
         if (secret is not null && !IsValid(secret, PaymentErrors.MaxSecretLength))
@@ -117,6 +117,9 @@ public sealed class PaymentProviderWorkflow(
         if (settings is null || !settings.HasBankAccount) return Result<PaymentProviderDto>.Failure(TuitionErrors.BankNotConfigured);
         var config = await store.FindProviderConfigAsync(centerId, Provider, token);
         if ((config?.Version ?? 0) != expectedVersion) return Result<PaymentProviderDto>.Failure(PaymentErrors.ConfigVersion);
+        // K18/K21: Auto only after a Shadow period; switching on records auto_since, earlier transfers never book.
+        if (wanted == PaymentProviderMode.Auto && config?.Mode is not (PaymentProviderMode.Shadow or PaymentProviderMode.Auto))
+            return Result<PaymentProviderDto>.Failure(PaymentErrors.AutoNotAvailable);
 
         var now = clock.UtcNow;
         var changes = new List<string>();
@@ -174,6 +177,23 @@ public sealed class PaymentProviderWorkflow(
         { return Result<PaymentProviderDto>.Failure(PaymentErrors.ConfigVersion); }
         await guard.CommitAsync(token);
         return Result<PaymentProviderDto>.Success(View(config, settings));
+    }
+
+    /// <summary>K18: Shadow next to hand-written receipts for Vietnam dates [from, to], at most 93 days.</summary>
+    public async Task<Result<ShadowReportDto>> ShadowReportAsync(Guid centerId, DateOnly from, DateOnly to,
+        ITuitionAcademicsReader academics, CancellationToken token)
+    {
+        if (to < from || to.DayNumber - from.DayNumber > ShadowReport.MaxDays)
+            return Result<ShadowReportDto>.Failure(PaymentErrors.InvalidReportRange);
+        var start = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), FinanceTime.Zone.GetUtcOffset(from.ToDateTime(TimeOnly.MinValue)));
+        var endLocal = to.AddDays(1).ToDateTime(TimeOnly.MinValue);
+        var end = new DateTimeOffset(endLocal, FinanceTime.Zone.GetUtcOffset(endLocal));
+        var transfers = await store.ListBankTransactionsAsync(centerId, start.ToUniversalTime(), end.ToUniversalTime(), token);
+        var receipts = await store.ListReceiptsAsync(centerId, token);
+        store.Detach();
+        return Result<ShadowReportDto>.Success(ShadowReport.Build(from, to,
+            transfers.Where(x => x.Status != BankTransactionStatus.Held).ToArray(), receipts,
+            await academics.ListStudentsAsync(centerId, token)));
     }
 
     /// <summary>Asks the Worker to pull now instead of waiting for the next doorbell or the 5-minute cycle.</summary>

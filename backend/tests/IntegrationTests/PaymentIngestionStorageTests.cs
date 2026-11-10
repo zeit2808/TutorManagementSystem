@@ -168,6 +168,7 @@ public sealed class PaymentIngestionDomainTests
 }
 
 /// <summary>Round 2b against real PostgreSQL: the database itself refuses every kind of duplicate.</summary>
+[Collection(TuitionDatabase.Name)]
 public sealed class RealPostgresPaymentIngestionStorageTests
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 10, 2, 0, 0, TimeSpan.Zero);

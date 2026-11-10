@@ -434,6 +434,20 @@ Chia thành các PR nhỏ, theo thứ tự:
 
 **Xong khi:** test song song và kéo lặp không tạo trùng, bất biến K17 đúng, Shadow không có khớp sai.
 
+**3a (xong 10/11/2026):** `PaymentCode.FindIn`, `PaymentMatcher`, `PaymentBooker` ghi `shadow_*` cho trung tâm Shadow, chạy trong `PaymentWorker`. Thử trên sandbox: QR `HPD1KMBCXR4` → chuyển khoản → kéo về → `Book (PaymentCode HPD1KMBCXR4)` đúng học sinh. Lưu ý:
+
+- Shadow đánh giá mỗi giao dịch **một lần**. Đổi tài khoản nhận hay tạo mã QR sau đó không làm đánh giá lại. Bước ghi thật (3b) phải khớp lại ngay lúc ghi, không dùng lại `shadow_*`.
+**3b (xong 10/11/2026):**
+
+- `receipts` có `bank_transaction_id`, `source` (`Manual`/`Auto`) và hai partial unique: một biên lai còn hiệu lực mỗi giao dịch, một biên lai `Auto` trong đời giao dịch (migration `PaymentBooking`). `payment_intents` có trạng thái `Paid`.
+- `PaymentBooker.RunAutoOnceAsync`: mỗi trung tâm trong khoá sổ, nạp sổ một lần, khớp lại ngay lúc ghi, tạo biên lai đứng tên `SystemActors.PaymentFeed` ("Tự động (SePay)"), phân bổ ưu tiên các khoản của mã QR, đánh dấu QR `Paid`; lô lỗi thì thử lại từng dòng (P10).
+- **Chốt:** giao dịch trước `auto_since_utc` → `Ignored` (`BeforeAuto`), không vào hàng chờ, vẫn có trong đối soát.
+- Huỷ biên lai tự động → giao dịch về `NeedsReview` (`VoidedReceipt`); phát lại không ghi lại được (unique `Auto`).
+- `Auto` chỉ bật được từ `Shadow`; khi `Auto`, ghi tay biên lai chuyển khoản bị từ chối (`tuition_bank_transfer_automatic`), tiền mặt vẫn ghi được.
+- `GET .../payment-provider/shadow-report?from&to` (Chủ, QL): mỗi giao dịch kèm biên lai ghi tay tương ứng và kết luận `Match` / `DifferentStudent` / `MissingManual` / `ManualOnly` / `BothSkipped`, cùng danh sách biên lai chuyển khoản không có giao dịch; `agrees` cho biết đã nên bật `Auto` chưa.
+- Test Postgres thật: ghi đúng một lần kể cả hai Worker song song, phân bổ vào khoản của QR, bất biến K17, huỷ rồi phát lại.
+- **Thử Auto thật trên sandbox (10/11/2026):** Chủ bật `Auto` qua API (Quản lý bị 403); webhook không tới được vì tunnel đã tắt nhưng lượt kéo vẫn lấy về giao dịch. Chuyển khoản `HPA2AK314C0 HOC PHI` 150.000đ → `Booked`, biên lai `PT-000001` nguồn `Auto` (học sinh chưa có khoản nợ nên thành số dư), QR chuyển `Paid`; 7 giao dịch thời Shadow → `Ignored` (`BeforeAuto`). **Frontend chưa có:** trường `source`, chế độ `Auto`, mã lỗi mới và màn báo cáo Shadow (Đợt 4).
+
 ### Đợt 4 — Hàng chờ và siết luồng tay
 - Màn "Tiền chưa rõ của ai" với gợi ý, gán, bỏ qua; huỷ biên lai hỏi gán lại.
 - Chặn ghi tay chuyển khoản khi `Auto`.

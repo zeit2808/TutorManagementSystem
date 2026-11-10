@@ -5,7 +5,9 @@ namespace TutorManagement.Modules.Finance.Domain.Tuition;
 public enum PaymentIntentStatus
 {
     Pending = 1,
-    Cancelled = 2
+    Cancelled = 2,
+    /// <summary>A transfer carrying this code was booked; a later one is still recognised and becomes credit.</summary>
+    Paid = 3
 }
 
 /// <summary>
@@ -46,6 +48,7 @@ public sealed class PaymentIntent : Entity<Guid>
     public PaymentIntentStatus Status { get; private set; }
     public DateTimeOffset ExpiresAtUtc { get; private set; }
     public DateTimeOffset? CancelledAtUtc { get; private set; }
+    public DateTimeOffset? PaidAtUtc { get; private set; }
     public Guid CreatedByUserId { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
 
@@ -68,6 +71,13 @@ public sealed class PaymentIntent : Entity<Guid>
         Status == PaymentIntentStatus.Pending && ExpiresAtUtc > now && Amount == amount &&
         BankBin == settings.BankBin && AccountNumber == settings.BankAccountNumber &&
         AccountName == settings.BankAccountName && ChargeIds.SequenceEqual(chargeIds.Distinct().Order());
+
+    public void MarkPaid(DateTimeOffset now)
+    {
+        if (Status == PaymentIntentStatus.Paid) return;
+        Status = PaymentIntentStatus.Paid;
+        PaidAtUtc = now;
+    }
 
     public void Cancel(DateTimeOffset now)
     {

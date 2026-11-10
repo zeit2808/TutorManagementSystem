@@ -29,6 +29,16 @@ public sealed class PaymentProviderController(PaymentProviderWorkflow workflow) 
     public async Task<IActionResult> Get(Guid centerId, CancellationToken token) =>
         Ok(HttpContext.ToApiResponse(await workflow.GetAsync(centerId, token)));
 
+    /// <summary>
+    /// K18: what Shadow would have booked next to the transfer receipts staff recorded, for Vietnam dates [from, to]
+    /// (at most 93 days). Switch to Auto only when <c>agrees</c> is true.
+    /// </summary>
+    [Authorize(Policy = CenterAccessPolicyNames.Management), HttpGet("shadow-report")]
+    [ProducesResponseType<ApiResponse<ShadowReportDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ShadowReport(Guid centerId, [FromQuery] DateOnly from, [FromQuery] DateOnly to,
+        [FromServices] TutorManagement.Modules.Finance.Application.Tuition.ITuitionAcademicsReader academics, CancellationToken token) =>
+        Done(await workflow.ShadowReportAsync(centerId, from, to, academics, token));
+
     /// <summary>Pull new transactions now (Shadow or Auto only). The Worker picks it up within a second or two.</summary>
     [Authorize(Policy = CenterAccessPolicyNames.Management), EnableRateLimiting("payment-intent"), HttpPost("pull")]
     [ProducesResponseType<ApiResponse<PaymentProviderDto>>(StatusCodes.Status200OK)]

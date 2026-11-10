@@ -1221,6 +1221,10 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at_utc");
 
+                    b.Property<DateTimeOffset?>("PaidAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paid_at_utc");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -1257,6 +1261,10 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
                     b.Property<long>("Amount")
                         .HasColumnType("bigint")
                         .HasColumnName("amount");
+
+                    b.Property<Guid?>("BankTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bank_transaction_id");
 
                     b.Property<Guid>("CenterId")
                         .HasColumnType("uuid")
@@ -1298,6 +1306,14 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("request_id");
 
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasDefaultValue("Manual")
+                        .HasColumnName("source");
+
                     b.Property<Guid>("StudentId")
                         .HasColumnType("uuid")
                         .HasColumnName("student_id");
@@ -1333,6 +1349,14 @@ namespace TutorManagement.Modules.Finance.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CenterId", "StudentId")
                         .HasDatabaseName("ix_receipts_student");
+
+                    b.HasIndex(new[] { "BankTransactionId" }, "ux_receipts_bank_transaction_auto")
+                        .IsUnique()
+                        .HasFilter("bank_transaction_id IS NOT NULL AND source = 'Auto'");
+
+                    b.HasIndex(new[] { "BankTransactionId" }, "ux_receipts_bank_transaction_live")
+                        .IsUnique()
+                        .HasFilter("bank_transaction_id IS NOT NULL AND voided_at_utc IS NULL");
 
                     b.ToTable("receipts", "finance", t =>
                         {

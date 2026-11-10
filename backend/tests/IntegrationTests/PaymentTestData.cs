@@ -3,9 +3,9 @@ using Npgsql;
 namespace TutorManagement.IntegrationTests;
 
 /// <summary>
-/// Removes what a payment test wrote to the shared local database, even when the test fails: configs of the given
-/// centers with their inbox rows, doorbells, audit events and tuition settings, and emails sent to the given addresses.
-/// Leftover configs would otherwise be pulled by every later fetcher run.
+/// Removes what a payment test wrote to the shared local database, even when the test fails: for each registered
+/// center (always one the test created) its payment, tuition, academics and organization rows; and emails sent to the
+/// registered addresses. Leftover configs would otherwise be pulled by every later fetcher run.
 /// </summary>
 internal sealed class PaymentTestData(string connectionString) : IAsyncDisposable
 {
@@ -37,7 +37,24 @@ internal sealed class PaymentTestData(string connectionString) : IAsyncDisposabl
             DELETE FROM finance.payment_webhook_deliveries
               WHERE config_id IN (SELECT id FROM finance.payment_provider_configs WHERE center_id = ANY(@centers));
             DELETE FROM finance.payment_provider_configs WHERE center_id = ANY(@centers);
+            DELETE FROM finance.payment_intents WHERE center_id = ANY(@centers);
+            DELETE FROM finance.receipt_allocations WHERE receipt_id IN (SELECT id FROM finance.receipts WHERE center_id = ANY(@centers));
+            DELETE FROM finance.receipts WHERE center_id = ANY(@centers);
+            DELETE FROM finance.receipt_counters WHERE center_id = ANY(@centers);
+            DELETE FROM finance.tuition_charges WHERE center_id = ANY(@centers);
+            DELETE FROM finance.class_billing_anchors WHERE center_id = ANY(@centers);
+            DELETE FROM finance.class_fees WHERE center_id = ANY(@centers);
             DELETE FROM finance.finance_settings WHERE center_id = ANY(@centers);
+            DELETE FROM academics.enrollments WHERE center_id = ANY(@centers);
+            DELETE FROM academics.teaching_sessions WHERE center_id = ANY(@centers);
+            DELETE FROM academics.classes WHERE center_id = ANY(@centers);
+            DELETE FROM academics.students WHERE center_id = ANY(@centers);
+            DELETE FROM academics.teachers WHERE center_id = ANY(@centers);
+            DELETE FROM academics.subjects WHERE center_id = ANY(@centers);
+            DELETE FROM organization.rooms WHERE center_id = ANY(@centers);
+            DELETE FROM organization.center_status_history WHERE center_id = ANY(@centers);
+            DELETE FROM iam.center_memberships WHERE center_id = ANY(@centers);
+            DELETE FROM organization.centers WHERE id = ANY(@centers);
             DELETE FROM iam.email_outbox_messages WHERE recipient = ANY(@emails);
             """, connection, transaction);
         command.Parameters.AddWithValue("centers", _centers.ToArray());

@@ -82,6 +82,16 @@ public interface ITuitionStore
     Task AddAsync<T>(T entity, CancellationToken token) where T : class;
     Task SaveAsync(CancellationToken token);
 
+    /// <summary>Forgets every tracked entity, so a failed or finished unit of work cannot leak into the next one.</summary>
+    void Detach();
+
+    /// <summary>Untracked: the center's pulled transfers in [fromUtc, toUtc).</summary>
+    Task<IReadOnlyList<Domain.Payments.BankTransaction>> ListBankTransactionsAsync(Guid centerId, DateTimeOffset fromUtc,
+        DateTimeOffset toUtc, CancellationToken token);
+
+    /// <summary>Tracked: the bank transfer a receipt was made from.</summary>
+    Task<Domain.Payments.BankTransaction?> FindBankTransactionAsync(Guid id, CancellationToken token);
+
     Task QueueEmailsAsync(IReadOnlyList<OutgoingTuitionEmail> emails, CancellationToken token);
     Task<IReadOnlyDictionary<Guid, string>> ReadEmailsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken token);
     string? StudentPortalUrl { get; }

@@ -2997,6 +2997,130 @@
         },
         "type": "object"
       },
+      "TutorManagement_Modules_Finance_Application_Payments_ShadowManualReceiptDto": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "number": {
+            "nullable": true,
+            "type": "string"
+          },
+          "receiptId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "receivedOn": {
+            "format": "date",
+            "type": "string"
+          },
+          "studentName": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TutorManagement_Modules_Finance_Application_Payments_ShadowReportDto": {
+        "additionalProperties": false,
+        "properties": {
+          "agrees": {
+            "type": "boolean"
+          },
+          "counts": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "from": {
+            "format": "date",
+            "type": "string"
+          },
+          "manualWithoutTransfer": {
+            "items": {
+              "$ref": "#/components/schemas/TutorManagement_Modules_Finance_Application_Payments_ShadowManualReceiptDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/TutorManagement_Modules_Finance_Application_Payments_ShadowReportRowDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "to": {
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TutorManagement_Modules_Finance_Application_Payments_ShadowReportRowDto": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "content": {
+            "nullable": true,
+            "type": "string"
+          },
+          "expectedStudentCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "expectedStudentName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "manualReceiptId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "manualReceiptNumber": {
+            "nullable": true,
+            "type": "string"
+          },
+          "manualStudentName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "referenceCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "shadowOutcome": {
+            "nullable": true,
+            "type": "string"
+          },
+          "shadowReason": {
+            "nullable": true,
+            "type": "string"
+          },
+          "transactedAtUtc": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "transactionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "verdict": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "TutorManagement_Modules_Finance_Application_Payroll_MyEarningsCenterDto": {
         "additionalProperties": false,
         "properties": {
@@ -4434,6 +4558,10 @@
           },
           "receivedOn": {
             "format": "date",
+            "type": "string"
+          },
+          "source": {
+            "nullable": true,
             "type": "string"
           },
           "studentCode": {
@@ -7808,6 +7936,33 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/TutorManagement_Modules_Finance_Application_Payments_PaymentProviderDto"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiError"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "message": {
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "traceId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Payments_ShadowReportDto": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TutorManagement_Modules_Finance_Application_Payments_ShadowReportDto"
           },
           "errors": {
             "items": {
@@ -21641,6 +21796,117 @@
               "application/xml": {
                 "schema": {
                   "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Payments_PaymentProviderDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "tags": [
+          "16 \u00B7 Tuition"
+        ]
+      }
+    },
+    "/api/v1/centers/{centerId}/tuition/payment-provider/shadow-report": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "centerId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Payments_ShadowReportDto"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Payments_ShadowReportDto"
                 }
               }
             },
