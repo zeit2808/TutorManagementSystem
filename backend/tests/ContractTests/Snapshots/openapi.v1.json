@@ -3068,6 +3068,131 @@
         },
         "type": "object"
       },
+      "TutorManagement_Modules_Finance_Application_Payments_PaymentMetricsDto": {
+        "additionalProperties": false,
+        "properties": {
+          "byFetchedBy": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "byStatus": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "days": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "doorbells": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "doorbellsByHour": {
+            "items": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "doorbellsRedelivered": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "fromUtc": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "invalidSignatureTotal": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "lastInvalidSignatureAtUtc": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastReconciledAtUtc": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastReconciliationFindings": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "lastReconciliationStatus": {
+            "nullable": true,
+            "type": "string"
+          },
+          "latencyMaxSeconds": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "latencyP50Seconds": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "latencyP95Seconds": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "manualAssigned": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "manualIgnored": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "manualRetried": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "oldestReceivedSeconds": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "openAlerts": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "receiptConflicts": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "seenAgain": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "toUtc": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "transferAmount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "transfers": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "TutorManagement_Modules_Finance_Application_Payments_PaymentProviderDto": {
         "additionalProperties": false,
         "properties": {
@@ -8392,6 +8517,33 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/TutorManagement_Modules_Finance_Application_Payments_PaymentAlertDto"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiError"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "message": {
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "traceId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Payments_PaymentMetricsDto": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TutorManagement_Modules_Finance_Application_Payments_PaymentMetricsDto"
           },
           "errors": {
             "items": {
@@ -23135,6 +23287,125 @@
               "application/xml": {
                 "schema": {
                   "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Payments_PaymentAlertDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "tags": [
+          "16 \u00B7 Tuition"
+        ]
+      }
+    },
+    "/api/v1/centers/{centerId}/tuition/payment-provider/metrics": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "centerId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "default": 7,
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Payments_PaymentMetricsDto"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Payments_PaymentMetricsDto"
                 }
               }
             },

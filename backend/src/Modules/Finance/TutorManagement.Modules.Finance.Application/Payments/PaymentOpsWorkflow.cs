@@ -53,8 +53,47 @@ public sealed class PaymentAlertDto
     public DateTimeOffset? AcknowledgedAtUtc { get; set; }
 }
 
+/// <summary>Đợt 5 metrics for one center over the last <c>Days</c> days, read from what is already stored.</summary>
+public sealed class PaymentMetricsDto
+{
+    public int Days { get; set; }
+    public DateTimeOffset FromUtc { get; set; }
+    public DateTimeOffset ToUtc { get; set; }
+    /// <summary>Correctly signed webhooks first seen in the window, and how many SePay sent more than once.</summary>
+    public int Doorbells { get; set; }
+    public int DoorbellsRedelivered { get; set; }
+    /// <summary>Doorbells per hour for the last 24 hours, oldest first (24 values).</summary>
+    public List<int> DoorbellsByHour { get; set; } = [];
+    public long InvalidSignatureTotal { get; set; }
+    public DateTimeOffset? LastInvalidSignatureAtUtc { get; set; }
+    /// <summary>Incoming transfers stored in the window, by status and by what found them first.</summary>
+    public int Transfers { get; set; }
+    public long TransferAmount { get; set; }
+    public Dictionary<string, int> ByStatus { get; set; } = [];
+    public Dictionary<string, int> ByFetchedBy { get; set; } = [];
+    /// <summary>Transfers the provider listed again after they were stored (absorbed by the keys).</summary>
+    public int SeenAgain { get; set; }
+    /// <summary>Attempts to book a second receipt that the database stopped. Should always be 0.</summary>
+    public int ReceiptConflicts { get; set; }
+    public int ManualAssigned { get; set; }
+    public int ManualIgnored { get; set; }
+    public int ManualRetried { get; set; }
+    /// <summary>Seconds from the bank transfer to its Auto receipt.</summary>
+    public double? LatencyP50Seconds { get; set; }
+    public double? LatencyP95Seconds { get; set; }
+    public double? LatencyMaxSeconds { get; set; }
+    /// <summary>How long the oldest transfer still waiting to be booked has waited, in seconds.</summary>
+    public double? OldestReceivedSeconds { get; set; }
+    public int OpenAlerts { get; set; }
+    public DateTimeOffset? LastReconciledAtUtc { get; set; }
+    public string? LastReconciliationStatus { get; set; }
+    public int? LastReconciliationFindings { get; set; }
+}
+
 public interface IPaymentOpsReader
 {
+    Task<PaymentMetricsDto> MetricsAsync(Guid centerId, DateTimeOffset now, int days, CancellationToken token);
+
     Task<(IReadOnlyList<ReconciliationRun> Items, int Total)> ListRunsAsync(Guid centerId, int page, int pageSize,
         CancellationToken token);
 
@@ -74,6 +113,7 @@ public static class PaymentOpsErrors
     public static readonly Error RunNotFound = new("payment_reconciliation_not_found", "The reconciliation was not found.");
     public static readonly Error AlertNotFound = new("payment_alert_not_found", "The alert was not found.");
     public static readonly Error AlertNotOpen = new("payment_alert_not_open", "The alert is not open any more.");
+    public static readonly Error InvalidDays = new("validation_error", "days must be 1–31.", "days");
     public static readonly Error InvalidState = new("validation_error", "state must be Open, Acknowledged, Resolved or All.", "state");
 }
 
@@ -99,6 +139,11 @@ public sealed class PaymentOpsWorkflow(IPaymentOpsReader reader, IPaymentOpsStor
         await ops.RequestReconciliationAsync(centerId, clock.UtcNow, token)
             ? Result<bool>.Success(true)
             : Result<bool>.Failure(PaymentErrors.NotPulling);
+
+    public async Task<Result<PaymentMetricsDto>> MetricsAsync(Guid centerId, int days, CancellationToken token) =>
+        days is < 1 or > 31
+            ? Result<PaymentMetricsDto>.Failure(PaymentOpsErrors.InvalidDays)
+            : Result<PaymentMetricsDto>.Success(await reader.MetricsAsync(centerId, clock.UtcNow, days, token));
 
     public async Task<Result<List<PaymentAlertDto>>> ListAlertsAsync(Guid centerId, string? state, CancellationToken token)
     {
