@@ -121,6 +121,7 @@ public sealed class OpenApiContractTests(OpenApiContractTests.Factory factory) :
     [InlineData("/api/v1/directory/centers/{centerId}")]
     [InlineData("/api/v1/directory/subjects")]
     [InlineData("/api/v1/centers/{centerId}/tuition/payment-provider")]
+    [InlineData("/api/v1/centers/{centerId}/tuition/payment-provider/pull")]
     public async Task Membership_and_teacher_endpoints_are_documented(string path)
     {
         var document = await LoadDocumentAsync();

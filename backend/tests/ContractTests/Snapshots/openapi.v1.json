@@ -21617,6 +21617,101 @@
         ]
       }
     },
+    "/api/v1/centers/{centerId}/tuition/payment-provider/pull": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "centerId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Payments_PaymentProviderDto"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_Finance_Application_Payments_PaymentProviderDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "tags": [
+          "16 \u00B7 Tuition"
+        ]
+      }
+    },
     "/api/v1/centers/{centerId}/tuition/settings": {
       "get": {
         "parameters": [

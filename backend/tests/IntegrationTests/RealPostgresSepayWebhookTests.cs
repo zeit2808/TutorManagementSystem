@@ -16,6 +16,7 @@ using TutorManagement.Modules.Finance.Infrastructure.Persistence;
 namespace TutorManagement.IntegrationTests;
 
 /// <summary>Round 2d through the real HTTP pipeline and PostgreSQL: the SePay doorbell.</summary>
+[Collection(TuitionDatabase.Name)]
 public sealed class RealPostgresSepayWebhookTests
 {
     private const string Path = "/api/v1/payments/webhooks/sepay/";

@@ -13,7 +13,9 @@ var connectionString = builder.Configuration.GetConnectionString("MainDatabase")
 builder.Services.AddSharedInfrastructure();
 builder.Services.AddIdentityAccessEmailWorker(connectionString, builder.Configuration);
 builder.Services.AddFinanceReminders(connectionString);
+builder.Services.AddFinancePaymentPulling();
 builder.Services.AddHostedService<Worker>();
+builder.Services.AddHostedService<PaymentWorker>();
 
 var host = builder.Build();
 await host.RunAsync();
