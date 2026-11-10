@@ -59,6 +59,8 @@ public static class PaymentErrors
         "currentPassword");
     public static readonly Error TokenInUse = new("payment_token_in_use",
         "This SePay API token is already connected to another center.", "apiToken");
+    public static readonly Error NotPulling = new("payment_not_pulling",
+        "SePay is not connected, or it is Off; connect it in Shadow mode first.");
     public static readonly Error ConfigVersion = new("tuition_concurrent_change",
         "The payment settings were changed by another request. Reload and try again.", "expectedVersion");
 }
@@ -172,6 +174,18 @@ public sealed class PaymentProviderWorkflow(
         { return Result<PaymentProviderDto>.Failure(PaymentErrors.ConfigVersion); }
         await guard.CommitAsync(token);
         return Result<PaymentProviderDto>.Success(View(config, settings));
+    }
+
+    /// <summary>Asks the Worker to pull now instead of waiting for the next doorbell or the 5-minute cycle.</summary>
+    public async Task<Result<PaymentProviderDto>> RequestPullAsync(Guid centerId, CancellationToken token)
+    {
+        var config = await store.FindProviderConfigAsync(centerId, Provider, token);
+        if (config is null || config.Mode == PaymentProviderMode.Off)
+            return Result<PaymentProviderDto>.Failure(PaymentErrors.NotPulling);
+        config.RequestPull(clock.UtcNow);
+        try { await store.SaveAsync(token); }
+        catch (TuitionPersistenceException) { return Result<PaymentProviderDto>.Failure(PaymentErrors.ConfigVersion); }
+        return Result<PaymentProviderDto>.Success(View(config, await store.FindSettingsAsync(centerId, token)));
     }
 
     private ProtectedSecrets Protect(Guid centerId, string secret, string apiToken) => new(

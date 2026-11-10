@@ -136,6 +136,17 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
             AutoReplenishment = true
         }));
+    // SePay retries at most a handful of times per transaction; partitioned by endpoint so one center cannot
+    // crowd out another, and by IP for unknown keys.
+    options.AddPolicy("payment-webhook", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Request.RouteValues["endpointKey"] as string ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 120,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
     options.AddPolicy("password-authenticated", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.FindFirst("sub")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions

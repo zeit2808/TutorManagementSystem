@@ -35,7 +35,7 @@ public sealed class RealPostgresPaymentProviderTests
             new ConfigurationBuilder().AddUserSecrets("TutorManagement.Api-LocalDevelopment").Build()
                 .GetConnectionString("MainDatabase") ??
             throw new InvalidOperationException("Configure a local test database.");
-        var now = new DateTimeOffset(2026, 11, 10, 3, 0, 0, TimeSpan.Zero);
+        var now = new DateTimeOffset(2026, 10, 1, 3, 0, 0, TimeSpan.Zero);
         var past = now.AddDays(-30);
         var marker = Guid.NewGuid().ToString("N")[..10];
         await using var provider = BuildServices(connectionString, now);

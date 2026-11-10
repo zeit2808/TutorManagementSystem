@@ -61,7 +61,7 @@ Mặc định, đổi được nếu bạn muốn:
 | Thành công = HTTP 200/201 **và** body `{"success": true}`; tài liệu ghi timeout 30 giây ở một trang và 8 giây ở trang khác | Trả lời trong vài mili giây nên cả hai đều thoả |
 | Gửi lại tối đa 7 lần trong khoảng 33 phút, quá 5 giờ thì không gửi lại; thứ tự không đảm bảo | Không phụ thuộc webhook: kéo định kỳ D9 bắt phần bị lỡ |
 | `code` là `""` khi chưa cấu hình tiền tố, không phải `null`; `content` giữ nguyên văn; `transactionDate` dạng `yyyy-MM-dd HH:mm:ss` giờ Việt Nam | **Tự đọc mã từ `content`**; đổi giờ VN sang UTC khi lưu |
-| Payload thử dùng `id` giả như 0 | Chuông có `id <= 0` chỉ ghi nhật ký |
+| Payload thử dùng `id` giả như 0 | Chuông thử ký đúng vẫn được ghi nhật ký và kích hoạt một lần kéo (vô hại, vì chỉ API ghi tiền); dùng được để thử kết nối |
 | Giá: FREE 50 giao dịch/tháng, STARTUP từ 120.000đ/tháng; gói SHOP **không có API** | Trung tâm phải dùng gói có API |
 
 **Còn phải đo ở Đợt 2, trước khi viết code (bước 2a):**
@@ -81,10 +81,18 @@ Mặc định, đổi được nếu bạn muốn:
 | 1 | **Đạt.** Cùng 3 `id`, cùng thứ tự, cùng dữ liệu nghiệp vụ qua 3 lần gọi danh sách; `GET /v2/transactions/{id}` trả đúng `id` và dữ liệu đó. `id` dạng UUID v1 (theo thời gian), vd. `254cd3a9-d7b0-11f1-...` | Thiết kế đứng được. Mẫu còn nhỏ và trong vài giây: **kiểm lại** sau vài ngày trên cùng giao dịch, và trên tài khoản thật trước khi bật `Auto` |
 | 2 | **Đạt.** `since_id=X` trả đúng các giao dịch mới hơn X, không gồm X. Danh sách luôn mới nhất trước | Khi kéo phải đi hết các trang rồi mới dời con trỏ về `id` **mới nhất** đã ghi |
 | 3 | **Có.** `transaction_date_from` / `transaction_date_to` (`yyyy-MM-dd HH:mm:ss`, giờ VN) lọc đúng | Quét 3 ngày mỗi đêm dùng lọc ngày, không cần quét lùi |
-| 4 | Chưa đo | Đo ở bước 2d khi có endpoint webhook |
+| 4 | **Ký lại với timestamp mới** (đo 10/11/2026: tắt API, giao dịch lúc 11:17:11, SePay tự gửi lại và được nhận lúc 11:31:59 với cửa sổ 300 giây; SePay hiển thị lần thử theo dạng "2/7", khoảng cách giãn dần: lần 1 → lần 2 khoảng 1 phút. Bấm "Gửi lại" bằng tay cũng ký với timestamp mới: giao dịch 47182 lúc 11:37:28 được nhận lúc 11:44:19) | Giữ cửa sổ 300 giây cho cả hai cách gửi lại |
 | 5 | Chưa đo. Một lần gọi danh sách mất khoảng 0,5 giây | Đo ở bước 2e |
 | 6 | Header trả `X-RateLimit-Limit: 3`, `X-RateLimit-Reset: 1` (giây) | Giới hạn 3 request/giây; đọc `X-RateLimit-Remaining` và `Retry-After` khi gặp 429 |
 | 7 | Trường ngân hàng là `bank_brand_name` (vd. `Vietcombank`); `reference_number` có giá trị (`SB...`) trên sandbox | `bank_code` = `bank_brand_name` chuẩn hoá. `reference_number` trên TK thật vẫn phải kiểm |
+
+**Thử webhook thật (bước 2d, 10/11/2026):** chữ ký đúng HMAC-SHA256 trên `{timestamp}.{raw body}`, header `X-SePay-Signature: sha256=<hex>`, `X-SePay-Timestamp` là Unix giây. Cả 3 lần 401 đầu tiên là do Secret Key dán trên SePay khác với Secret đã lưu; log `SePay webhook refused: ...` cho biết ngay lý do (thiếu header, lệch giờ bao nhiêu giây, sai định dạng hay không khớp secret) mà không ghi secret.
+
+**Kéo thật (bước 2e, 10/11/2026):** một lượt `PaymentFetcher` trên sandbox cho trung tâm thử lấy về 6 giao dịch tiền vào, khớp 4/4 `referenceCode` trong nhật ký chuông, và cả **2 giao dịch có webhook bị 401** (Secret Key lệch lúc đầu): webhook hỏng không làm mất tiền. Lượt đầu lọc theo ngày kết nối, con trỏ dời tới `id` mới nhất, lịch kéo kế tiếp +5 phút.
+
+- Trên sandbox, tiền vào tài khoản ảo: `account_number = 0000000001`, `va = SBSEPAY...`. Tài khoản học phí của trung tâm thử là số khác, nên `bank_bin` để trống. **Trước Đợt 3:** tài khoản nhận trong cài đặt học phí phải là đúng số tài khoản (hoặc VA) mà SePay báo, nếu không mọi giao dịch sẽ là `OtherAccount`.
+- Độ trễ webhook → API (điểm đo 5) chưa đo riêng: lượt kéo chạy sau khi đã có đủ webhook. Đo khi chạy Worker liên tục ở Đợt 3.
+- DB local còn nhiều cấu hình thanh toán do test để lại (khoá thử ngẫu nhiên). Worker gặp chúng chỉ ghi `last_pull_error` ("cannot be decrypted") và không gọi SePay; nên cho các test tự dọn hoặc dọn DB local trước khi chạy Worker lâu dài.
 
 **Phát hiện thêm:**
 
@@ -134,7 +142,7 @@ SePay → POST /payments/webhooks/sepay/{endpointKey}   (body tối đa 64 KB)
 
 Webhook, kéo định kỳ và đối soát **đi chung một đường** (bước Kéo), nên chỉ có một khoá chống trùng và một bộ test. Mẫu này gọi là *thin webhook / fetch-on-notify*.
 
-**Cửa sổ timestamp.** Mặc định ±300 giây theo tài liệu SePay. Chuông không ghi được tiền, nên một webhook thật bị phát lại chỉ gây thêm một lần kéo; cửa sổ này chỉ để chống spam. Nếu bước đo 4 cho thấy SePay gửi lại với timestamp cũ, nới cửa sổ lên 6 giờ (lớn hơn mốc 5 giờ SePay ngừng gửi lại). Dù chuông bị chặn, kéo định kỳ 5 phút vẫn lấy được giao dịch.
+**Cửa sổ timestamp.** Mặc định ±300 giây theo tài liệu SePay, đổi bằng `Payments:WebhookTimestampToleranceSeconds` (60–21600). Chuông không ghi được tiền, nên một webhook thật bị phát lại chỉ gây thêm một lần kéo; cửa sổ này chỉ để chống spam. Nếu bước đo 4 cho thấy SePay gửi lại với timestamp cũ, nới cửa sổ lên 6 giờ (lớn hơn mốc 5 giờ SePay ngừng gửi lại). Dù chuông bị chặn, kéo định kỳ 5 phút vẫn lấy được giao dịch.
 
 **Giới hạn tốc độ khi chạy nhiều Worker.** Mỗi cấu hình chỉ một Worker kéo tại một thời điểm (lease), và khoảng cách tối thiểu 1 giây giữa hai lần kéo lưu trong DB (`last_pulled_at`), nên đúng với bất kỳ số Worker nào. Token bucket trong bộ nhớ chỉ dàn đều các trang trong **một** lần kéo, mà một lần kéo luôn nằm trong một process. Giả định: mỗi token SePay chỉ thuộc một cấu hình; hai cấu hình dùng chung token bị chặn bằng unique trên `api_token_fingerprint`.
 
@@ -275,7 +283,7 @@ Booked   → NeedsReview                  (biên lai bị huỷ mà không gán 
 
 `Held`: chỉ Chủ thấy, có hai nút **Là giao dịch riêng** (về `Received`) và **Là bản trùng** (`Ignored`, `ignore_reason = Duplicate`). Trước khi chọn, Chủ phải đối chiếu sao kê ngân hàng.
 
-`ignore_reason` tự động: `OtherAccount`. Giao dịch tiền ra không lưu. Chuông có `id <= 0` chỉ ghi nhật ký.
+`ignore_reason` tự động: `OtherAccount`. Giao dịch tiền ra không lưu. Chuông thử (`id <= 0`) chỉ là một lần kéo thừa.
 
 ### Quy tắc khớp
 

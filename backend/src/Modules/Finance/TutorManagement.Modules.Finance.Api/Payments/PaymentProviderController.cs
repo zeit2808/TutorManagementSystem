@@ -29,6 +29,12 @@ public sealed class PaymentProviderController(PaymentProviderWorkflow workflow) 
     public async Task<IActionResult> Get(Guid centerId, CancellationToken token) =>
         Ok(HttpContext.ToApiResponse(await workflow.GetAsync(centerId, token)));
 
+    /// <summary>Pull new transactions now (Shadow or Auto only). The Worker picks it up within a second or two.</summary>
+    [Authorize(Policy = CenterAccessPolicyNames.Management), EnableRateLimiting("payment-intent"), HttpPost("pull")]
+    [ProducesResponseType<ApiResponse<PaymentProviderDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Pull(Guid centerId, CancellationToken token) =>
+        Done(await workflow.RequestPullAsync(centerId, token));
+
     [Authorize(Policy = CenterAccessPolicyNames.Owner), EnableRateLimiting("password-authenticated"), HttpPut,
      Consumes("application/json")]
     [ProducesResponseType<ApiResponse<PaymentProviderDto>>(StatusCodes.Status200OK)]
