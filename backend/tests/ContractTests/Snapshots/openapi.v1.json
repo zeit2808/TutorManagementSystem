@@ -5730,6 +5730,10 @@
       "TutorManagement_Modules_IdentityAccess_Application_Authentication_GetCurrentUser_CurrentUserDto": {
         "additionalProperties": false,
         "properties": {
+          "displayName": {
+            "nullable": true,
+            "type": "string"
+          },
           "email": {
             "nullable": true,
             "type": "string"
@@ -5745,6 +5749,10 @@
           },
           "id": {
             "format": "uuid",
+            "type": "string"
+          },
+          "phoneNumber": {
+            "nullable": true,
             "type": "string"
           },
           "roles": {
@@ -6038,6 +6046,38 @@
         },
         "type": "object"
       },
+      "TutorManagement_Modules_IdentityAccess_Contracts_Authentication_ConfirmEmailChangeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "newEmail": {
+            "nullable": true,
+            "type": "string"
+          },
+          "otp": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TutorManagement_Modules_IdentityAccess_Contracts_Authentication_EmailChangeStartedResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "expiresAtUtc": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "newEmail": {
+            "nullable": true,
+            "type": "string"
+          },
+          "resendAvailableAtUtc": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "TutorManagement_Modules_IdentityAccess_Contracts_Authentication_ForgotPasswordRequest": {
         "additionalProperties": false,
         "properties": {
@@ -6112,6 +6152,20 @@
         ],
         "type": "object"
       },
+      "TutorManagement_Modules_IdentityAccess_Contracts_Authentication_RequestEmailChangeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "currentPassword": {
+            "nullable": true,
+            "type": "string"
+          },
+          "newEmail": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "TutorManagement_Modules_IdentityAccess_Contracts_Authentication_ResendVerificationEmailRequest": {
         "additionalProperties": false,
         "properties": {
@@ -6156,6 +6210,20 @@
             "type": "integer"
           },
           "tokenType": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TutorManagement_Modules_IdentityAccess_Contracts_Authentication_UpdateMyProfileRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "displayName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "phoneNumber": {
             "nullable": true,
             "type": "string"
           }
@@ -9381,6 +9449,33 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/TutorManagement_Modules_IdentityAccess_Application_Members_MemberInvitationDto"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiError"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "message": {
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "traceId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_IdentityAccess_Contracts_Authentication_EmailChangeStartedResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TutorManagement_Modules_IdentityAccess_Contracts_Authentication_EmailChangeStartedResponse"
           },
           "errors": {
             "items": {
@@ -24853,6 +24948,192 @@
         ]
       }
     },
+    "/api/v1/me/email/change": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TutorManagement_Modules_IdentityAccess_Contracts_Authentication_RequestEmailChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_IdentityAccess_Contracts_Authentication_EmailChangeStartedResponse"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_IdentityAccess_Contracts_Authentication_EmailChangeStartedResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "tags": [
+          "01 \u00B7 Authentication"
+        ]
+      }
+    },
+    "/api/v1/me/email/confirm": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TutorManagement_Modules_IdentityAccess_Contracts_Authentication_ConfirmEmailChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_IdentityAccess_Application_Authentication_GetCurrentUser_CurrentUserDto"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_IdentityAccess_Application_Authentication_GetCurrentUser_CurrentUserDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "tags": [
+          "01 \u00B7 Authentication"
+        ]
+      }
+    },
     "/api/v1/me/invitations/accept": {
       "post": {
         "requestBody": {
@@ -25099,6 +25380,84 @@
         },
         "tags": [
           "13 \u00B7 My Schedule"
+        ]
+      }
+    },
+    "/api/v1/me/profile": {
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TutorManagement_Modules_IdentityAccess_Contracts_Authentication_UpdateMyProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_IdentityAccess_Application_Authentication_GetCurrentUser_CurrentUserDto"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_TutorManagement_Modules_IdentityAccess_Application_Authentication_GetCurrentUser_CurrentUserDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorManagement_WebApi_Responses_ApiResponse_System_Object"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "tags": [
+          "01 \u00B7 Authentication"
         ]
       }
     },

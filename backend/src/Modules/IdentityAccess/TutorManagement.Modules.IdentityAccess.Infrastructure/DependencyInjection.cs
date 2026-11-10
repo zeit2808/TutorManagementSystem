@@ -57,6 +57,7 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddSingleton<IOneTimeTokenService, OneTimeTokenService>();
         services.AddSingleton<IPasswordResetOtpService, PasswordResetOtpService>();
+        services.AddSingleton<IEmailChangeOtpService, EmailChangeOtpService>();
         services.AddScoped<ICommandHandler<LoginCommand, AuthenticationResult>, LoginCommandHandler>();
         services.AddScoped<ICommandHandler<GoogleLoginCommand, AuthenticationResult>, GoogleLoginCommandHandler>();
         services.AddScoped<ICommandHandler<LinkGoogleCommand>, LinkGoogleCommandHandler>();
@@ -68,6 +69,13 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<ResetPasswordCommand>, ResetPasswordCommandHandler>();
         services.AddScoped<ICommandHandler<ResendVerificationEmailCommand>, ResendVerificationEmailCommandHandler>();
         services.AddScoped<ICommandHandler<VerifyEmailCommand>, VerifyEmailCommandHandler>();
+        services.AddScoped<ICommandHandler<TutorManagement.Modules.IdentityAccess.Application.Authentication.Profile.UpdateMyProfileCommand>,
+            TutorManagement.Modules.IdentityAccess.Application.Authentication.Profile.UpdateMyProfileCommandHandler>();
+        services.AddScoped<ICommandHandler<TutorManagement.Modules.IdentityAccess.Application.Authentication.Profile.RequestEmailChangeCommand,
+                TutorManagement.Modules.IdentityAccess.Application.Authentication.Profile.EmailChangeStarted>,
+            TutorManagement.Modules.IdentityAccess.Application.Authentication.Profile.RequestEmailChangeCommandHandler>();
+        services.AddScoped<ICommandHandler<TutorManagement.Modules.IdentityAccess.Application.Authentication.Profile.ConfirmEmailChangeCommand>,
+            TutorManagement.Modules.IdentityAccess.Application.Authentication.Profile.ConfirmEmailChangeCommandHandler>();
         services.AddScoped<
             ICommandHandler<InviteCenterOwnerCommand, CenterInvitationResult>,
             InviteCenterOwnerCommandHandler>();

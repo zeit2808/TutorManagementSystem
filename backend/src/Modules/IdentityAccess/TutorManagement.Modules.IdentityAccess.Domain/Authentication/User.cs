@@ -42,6 +42,9 @@ public sealed class User : AggregateRoot<Guid>
 
     public string? PhoneNumber { get; private set; }
 
+    /// <summary>The name people see (chip, member lists). Optional; clients fall back to the username or email.</summary>
+    public string? DisplayName { get; private set; }
+
     public string? PasswordHash { get; private set; }
 
     public bool HasLocalPassword => !string.IsNullOrWhiteSpace(PasswordHash);
@@ -116,6 +119,23 @@ public sealed class User : AggregateRoot<Guid>
     public void VerifyEmail(DateTimeOffset verifiedAtUtc)
     {
         EmailVerifiedAtUtc ??= verifiedAtUtc;
+    }
+
+    /// <summary>Sets the self-service profile fields. Inputs must already be validated and normalized.</summary>
+    public void UpdateProfile(string? displayName, string? phoneNumber)
+    {
+        DisplayName = string.IsNullOrWhiteSpace(displayName) ? null : displayName.Trim();
+        PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim();
+    }
+
+    /// <summary>Moves the sign-in email to an address the user has just proven they own.</summary>
+    public void ChangeEmail(string email, DateTimeOffset verifiedAtUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+        var trimmed = email.Trim();
+        Email = trimmed;
+        NormalizedEmail = trimmed.ToUpperInvariant();
+        EmailVerifiedAtUtc = verifiedAtUtc;
     }
 
     public void Deactivate() => IsActive = false;

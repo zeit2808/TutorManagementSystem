@@ -10,7 +10,9 @@ namespace TutorManagement.Modules.IdentityAccess.Application.Authentication.GetC
 public sealed record CurrentUserDto(
     Guid Id,
     string? Username,
+    string? DisplayName,
     string Email,
+    string? PhoneNumber,
     bool EmailVerified,
     IReadOnlyList<string> Roles,
     bool HasPassword,
