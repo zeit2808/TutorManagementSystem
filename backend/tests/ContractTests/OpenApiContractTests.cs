@@ -123,6 +123,11 @@ public sealed class OpenApiContractTests(OpenApiContractTests.Factory factory) :
     [InlineData("/api/v1/centers/{centerId}/tuition/payment-provider")]
     [InlineData("/api/v1/centers/{centerId}/tuition/payment-provider/pull")]
     [InlineData("/api/v1/centers/{centerId}/tuition/payment-provider/shadow-report")]
+    [InlineData("/api/v1/centers/{centerId}/bank-transactions")]
+    [InlineData("/api/v1/centers/{centerId}/bank-transactions/{transferId}/assign")]
+    [InlineData("/api/v1/centers/{centerId}/bank-transactions/{transferId}/ignore")]
+    [InlineData("/api/v1/centers/{centerId}/bank-transactions/{transferId}/resolve-held")]
+    [InlineData("/api/v1/centers/{centerId}/bank-transactions/{transferId}/retry")]
     public async Task Membership_and_teacher_endpoints_are_documented(string path)
     {
         var document = await LoadDocumentAsync();

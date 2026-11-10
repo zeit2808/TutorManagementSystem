@@ -85,6 +85,8 @@ public sealed class ReceiptDto
     public string? PayerName { get; set; }
     /// <summary>Manual, or Auto when the bank feed booked it.</summary>
     public string Source { get; set; } = "Manual";
+    /// <summary>The bank transfer it records; after a void the transfer is back in the queue to be assigned again.</summary>
+    public Guid? BankTransactionId { get; set; }
     /// <summary>Cash or BankTransfer.</summary>
     public string Method { get; set; } = string.Empty;
     public long Amount { get; set; }
