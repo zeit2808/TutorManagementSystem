@@ -106,6 +106,9 @@ public sealed class RealPostgresPaymentIntentTests
         var past = Local(1, 1, 8);
         var marker = Guid.NewGuid().ToString("N")[..8];
         var owner = User.CreateExternal($"owner-{marker}@example.invalid", past);
+        // The bank account change emails every owner (D7); remove that email afterwards.
+        await using var data = new PaymentTestData(connectionString);
+        data.Email(owner.Email);
         var anUser = User.CreateExternal($"an-{marker}@example.invalid", past);
         var strangerUser = User.CreateExternal($"stranger-{marker}@example.invalid", past);
         var center = Center.Create("QR LLC", $"QR {marker}",

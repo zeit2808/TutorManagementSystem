@@ -64,6 +64,7 @@ public sealed class RealPostgresSepayWebhookTests
             builder.UseSetting("Payments:FingerprintKey", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
         });
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        await using var data = new PaymentTestData(connectionString);
 
         var marker = Guid.NewGuid().ToString("N");
         var secret = $"whsec-{marker}";
@@ -75,7 +76,7 @@ public sealed class RealPostgresSepayWebhookTests
                 protector.Protect(secret, SecretPurposes.WebhookSecret(center, "Sepay")),
                 protector.Protect(token, SecretPurposes.ApiToken(center, "Sepay")),
                 protector.Fingerprint(token, SecretPurposes.ApiTokenFingerprint("Sepay")), protector.ActiveKeyId);
-            var (a, b) = (Guid.NewGuid(), Guid.NewGuid());
+            var (a, b) = (data.Center(Guid.NewGuid()), data.Center(Guid.NewGuid()));
             shadow = PaymentProviderConfig.Create(a, PaymentProvider.Sepay, "970436", "111222333", Secrets(a, $"ta-{marker}"),
                 Guid.NewGuid(), DateTimeOffset.UtcNow);
             shadow.ChangeMode(PaymentProviderMode.Shadow, Guid.NewGuid(), DateTimeOffset.UtcNow);

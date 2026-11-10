@@ -47,6 +47,11 @@ public sealed class RealPostgresPaymentProviderTests
         var googleOwner = User.CreateExternal($"google-{marker}@example.invalid", past);
         var center = NewCenter($"Pay {marker}", past, owner.Id);
         var otherCenter = NewCenter($"Pay2 {marker}", past, googleOwner.Id);
+        await using var data = new PaymentTestData(connectionString);
+        data.Center(center.Id);
+        data.Center(otherCenter.Id);
+        data.Email(owner.Email);
+        data.Email(googleOwner.Email);
         var account = RandomNumberGenerator.GetInt32(100_000_000, int.MaxValue).ToString(CultureInfo.InvariantCulture);
         var token1 = $"tok1{marker}{marker}";
         var token2 = $"tok2{marker}{marker}";
