@@ -202,6 +202,10 @@ public sealed class RealPostgresPaymentIngestionStorageTests
         var marker = Guid.NewGuid().ToString("N");
         var account = RandomNumberGenerator.GetInt32(100_000_000, int.MaxValue).ToString(CultureInfo.InvariantCulture);
         var (centerA, centerB, centerC, actor) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        await using var data = new PaymentTestData(ConnectionString());
+        data.Center(centerA);
+        data.Center(centerB);
+        data.Center(centerC);
         var configA = PaymentProviderConfig.Create(centerA, PaymentProvider.Sepay, "970436", account,
             PaymentIngestionDomainTests.Secrets(protector, centerA, $"token-a-{marker}"), actor, Now);
         var configB = PaymentProviderConfig.Create(centerB, PaymentProvider.Sepay, "970436", account,

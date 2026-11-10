@@ -167,6 +167,9 @@ public sealed class RealPostgresPaymentFetcherTests
             PaymentIngestionDomainTests.Secrets(protector, center, token), Guid.NewGuid(), clock.Now);
         config.ChangeMode(PaymentProviderMode.Shadow, Guid.NewGuid(), clock.Now);
         var offCenter = Guid.NewGuid();
+        await using var data = new PaymentTestData(connectionString);
+        data.Center(center);
+        data.Center(offCenter);
         var off = PaymentProviderConfig.Create(offCenter, PaymentProvider.Sepay, "970436", account + "0",
             PaymentIngestionDomainTests.Secrets(protector, offCenter, $"off-{marker}"), Guid.NewGuid(), clock.Now);
         await using (var db = new FinanceDbContext(options))

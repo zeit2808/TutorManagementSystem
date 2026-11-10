@@ -33,6 +33,9 @@ public sealed class RealPostgresBankAccountChangeTests
         var owner = User.CreateExternal($"owner-{marker}@example.invalid", now.AddDays(-9));
         var manager = Guid.NewGuid();
         var center = Guid.NewGuid();
+        await using var data = new PaymentTestData(connectionString);
+        data.Center(center);
+        data.Email(owner.Email);
         var account = RandomNumberGenerator.GetInt32(100_000_000, int.MaxValue).ToString(CultureInfo.InvariantCulture);
         var identityOptions = new DbContextOptionsBuilder<IdentityDbContext>().UseNpgsql(connectionString).Options;
         var financeOptions = new DbContextOptionsBuilder<FinanceDbContext>().UseNpgsql(connectionString).Options;
