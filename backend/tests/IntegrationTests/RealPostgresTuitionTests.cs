@@ -75,6 +75,7 @@ public sealed class TuitionMathTests
 /// mid-cycle (round money), fee changes from the next cycle, receipts with credit and voiding, discounts, the
 /// center's own reduction for missed sessions (H18), reminders and the student's view.
 /// </summary>
+[Collection(TuitionDatabase.Name)]
 public sealed class RealPostgresTuitionTests
 {
     private static readonly TimeZoneInfo Vietnam = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");

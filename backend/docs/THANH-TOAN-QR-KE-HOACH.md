@@ -61,7 +61,7 @@ Mặc định, đổi được nếu bạn muốn:
 | Thành công = HTTP 200/201 **và** body `{"success": true}`; tài liệu ghi timeout 30 giây ở một trang và 8 giây ở trang khác | Trả lời trong vài mili giây nên cả hai đều thoả |
 | Gửi lại tối đa 7 lần trong khoảng 33 phút, quá 5 giờ thì không gửi lại; thứ tự không đảm bảo | Không phụ thuộc webhook: kéo định kỳ D9 bắt phần bị lỡ |
 | `code` là `""` khi chưa cấu hình tiền tố, không phải `null`; `content` giữ nguyên văn; `transactionDate` dạng `yyyy-MM-dd HH:mm:ss` giờ Việt Nam | **Tự đọc mã từ `content`**; đổi giờ VN sang UTC khi lưu |
-| Payload thử dùng `id` giả như 0 | Chuông có `id <= 0` chỉ ghi nhật ký |
+| Payload thử dùng `id` giả như 0 | Chuông thử ký đúng vẫn được ghi nhật ký và kích hoạt một lần kéo (vô hại, vì chỉ API ghi tiền); dùng được để thử kết nối |
 | Giá: FREE 50 giao dịch/tháng, STARTUP từ 120.000đ/tháng; gói SHOP **không có API** | Trung tâm phải dùng gói có API |
 
 **Còn phải đo ở Đợt 2, trước khi viết code (bước 2a):**
@@ -134,7 +134,7 @@ SePay → POST /payments/webhooks/sepay/{endpointKey}   (body tối đa 64 KB)
 
 Webhook, kéo định kỳ và đối soát **đi chung một đường** (bước Kéo), nên chỉ có một khoá chống trùng và một bộ test. Mẫu này gọi là *thin webhook / fetch-on-notify*.
 
-**Cửa sổ timestamp.** Mặc định ±300 giây theo tài liệu SePay. Chuông không ghi được tiền, nên một webhook thật bị phát lại chỉ gây thêm một lần kéo; cửa sổ này chỉ để chống spam. Nếu bước đo 4 cho thấy SePay gửi lại với timestamp cũ, nới cửa sổ lên 6 giờ (lớn hơn mốc 5 giờ SePay ngừng gửi lại). Dù chuông bị chặn, kéo định kỳ 5 phút vẫn lấy được giao dịch.
+**Cửa sổ timestamp.** Mặc định ±300 giây theo tài liệu SePay, đổi bằng `Payments:WebhookTimestampToleranceSeconds` (60–21600). Chuông không ghi được tiền, nên một webhook thật bị phát lại chỉ gây thêm một lần kéo; cửa sổ này chỉ để chống spam. Nếu bước đo 4 cho thấy SePay gửi lại với timestamp cũ, nới cửa sổ lên 6 giờ (lớn hơn mốc 5 giờ SePay ngừng gửi lại). Dù chuông bị chặn, kéo định kỳ 5 phút vẫn lấy được giao dịch.
 
 **Giới hạn tốc độ khi chạy nhiều Worker.** Mỗi cấu hình chỉ một Worker kéo tại một thời điểm (lease), và khoảng cách tối thiểu 1 giây giữa hai lần kéo lưu trong DB (`last_pulled_at`), nên đúng với bất kỳ số Worker nào. Token bucket trong bộ nhớ chỉ dàn đều các trang trong **một** lần kéo, mà một lần kéo luôn nằm trong một process. Giả định: mỗi token SePay chỉ thuộc một cấu hình; hai cấu hình dùng chung token bị chặn bằng unique trên `api_token_fingerprint`.
 
@@ -275,7 +275,7 @@ Booked   → NeedsReview                  (biên lai bị huỷ mà không gán 
 
 `Held`: chỉ Chủ thấy, có hai nút **Là giao dịch riêng** (về `Received`) và **Là bản trùng** (`Ignored`, `ignore_reason = Duplicate`). Trước khi chọn, Chủ phải đối chiếu sao kê ngân hàng.
 
-`ignore_reason` tự động: `OtherAccount`. Giao dịch tiền ra không lưu. Chuông có `id <= 0` chỉ ghi nhật ký.
+`ignore_reason` tự động: `OtherAccount`. Giao dịch tiền ra không lưu. Chuông thử (`id <= 0`) chỉ là một lần kéo thừa.
 
 ### Quy tắc khớp
 

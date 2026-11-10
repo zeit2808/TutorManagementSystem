@@ -87,6 +87,7 @@ public sealed class PaymentQrTests
 }
 
 /// <summary>Making the QR code against real PostgreSQL: the amount follows the ledger and repeats reuse the code.</summary>
+[Collection(TuitionDatabase.Name)]
 public sealed class RealPostgresPaymentIntentTests
 {
     private static readonly TimeZoneInfo Vietnam = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");

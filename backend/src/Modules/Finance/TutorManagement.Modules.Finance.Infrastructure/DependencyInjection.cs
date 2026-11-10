@@ -19,6 +19,16 @@ public static class DependencyInjection
         services.AddScoped<PaymentIntentWorkflow>();
         services.AddScoped<PaymentProviderWorkflow>();
         services.AddScoped<FinanceSettingsWorkflow>();
+        services.AddScoped<IPaymentWebhookStore, PaymentWebhookStore>();
+        services.AddScoped<SepayWebhookReceiver>();
+        services.AddSingleton(provider =>
+        {
+            var configured = provider.GetRequiredService<IConfiguration>()["Payments:WebhookTimestampToleranceSeconds"];
+            var seconds = int.TryParse(configured, out var value) ? value : 300;
+            if (seconds is < 60 or > 6 * 60 * 60)
+                throw new InvalidOperationException("Payments:WebhookTimestampToleranceSeconds must be 60–21600.");
+            return new WebhookOptions { TimestampToleranceSeconds = seconds };
+        });
         services.AddScoped<StudentTuitionQuery>();
         services.AddScoped<IPayrollStore, PayrollStore>();
         services.AddScoped<IPayrollAcademicsReader, PayrollAcademicsReader>();

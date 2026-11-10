@@ -27,7 +27,7 @@ public sealed class RealPostgresBankAccountChangeTests
             new ConfigurationBuilder().AddUserSecrets("TutorManagement.Api-LocalDevelopment").Build()
                 .GetConnectionString("MainDatabase") ??
             throw new InvalidOperationException("Configure a local test database.");
-        var now = new DateTimeOffset(2026, 11, 10, 4, 0, 0, TimeSpan.Zero);
+        var now = new DateTimeOffset(2026, 10, 1, 4, 0, 0, TimeSpan.Zero);
         var clock = new Clock(now);
         var marker = Guid.NewGuid().ToString("N")[..10];
         var owner = User.CreateExternal($"owner-{marker}@example.invalid", now.AddDays(-9));
