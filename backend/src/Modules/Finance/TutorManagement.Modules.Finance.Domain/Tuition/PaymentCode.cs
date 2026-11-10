@@ -47,6 +47,22 @@ public static class PaymentCode
         return found;
     }
 
+    /// <summary>
+    /// Text shaped like a code ("HP" and 9 code characters) whose check character is wrong: someone typed a code and
+    /// got it wrong. Lets staff see "a code, mistyped" instead of "no code".
+    /// </summary>
+    public static bool HasMistypedCode(string? content)
+    {
+        if (string.IsNullOrEmpty(content)) return false;
+        var run = new string(content.ToUpperInvariant().Where(char.IsAsciiLetterOrDigit).ToArray());
+        for (var at = run.IndexOf(Prefix, StringComparison.Ordinal); at >= 0 && at + Length <= run.Length;
+             at = run.IndexOf(Prefix, at + 1, StringComparison.Ordinal))
+            if (run.AsSpan(at + Prefix.Length, Length - Prefix.Length).ToArray()
+                .All(x => Alphabet.Contains(x switch { 'O' => '0', 'I' or 'L' => '1', _ => x })))
+                return true;
+        return false;
+    }
+
     private static char CheckCharacter(string body)
     {
         var sum = 0;

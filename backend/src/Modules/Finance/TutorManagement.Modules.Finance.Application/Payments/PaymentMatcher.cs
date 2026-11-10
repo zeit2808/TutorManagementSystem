@@ -81,8 +81,10 @@ public static class PaymentMatcher
             return MatchDecision.Booked(byCode[0], null, $"StudentCode {StudentCode(students[byCode[0]].Code)}");
 
         // 7. Nothing to go on.
-        return codes.Count > 0
-            ? MatchDecision.NeedsReview(ReviewReason.UnknownCode, "Code " + codes[0] + " is not a QR code of this center")
+        if (codes.Count > 0)
+            return MatchDecision.NeedsReview(ReviewReason.UnknownCode, "Code " + codes[0] + " is not a QR code of this center");
+        return PaymentCode.HasMistypedCode(transaction.Content)
+            ? MatchDecision.NeedsReview(ReviewReason.UnknownCode, "A code was typed but its check character is wrong")
             : MatchDecision.NeedsReview(ReviewReason.NoCode, "No code in the content");
     }
 
