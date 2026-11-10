@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using TutorManagement.Modules.Finance.Application.Payments;
 using TutorManagement.Modules.Finance.Application.Tuition;
 using TutorManagement.Modules.Finance.Contracts.Tuition;
 using TutorManagement.Modules.IdentityAccess.Contracts.Authorization;
@@ -37,6 +38,7 @@ public abstract class TuitionControllerBase : ControllerBase
         var response = ApiResponse<object>.Failure([new ApiError(error.Code, error.Message, error.Field)],
             HttpContext.TraceIdentifier, error.Message);
         if (error == TuitionErrors.NotFound) return NotFound(response);
+        if (error == TuitionErrors.BankChangeOwnerOnly) return StatusCode(StatusCodes.Status403Forbidden, response);
         if (error.Code == "validation_error") return BadRequest(response);
         if (error.Code == TuitionErrors.ConcurrentChange.Code) return Conflict(response);
         return UnprocessableEntity(response);
@@ -195,14 +197,22 @@ public sealed class TuitionController(TuitionWorkflow workflow, PaymentIntentWor
     public async Task<IActionResult> Settings(Guid centerId, CancellationToken token) =>
         IsTeacher() ? Forbidden() : Ok(HttpContext.ToApiResponse(await workflow.GetSettingsAsync(centerId, token)));
 
-    [Authorize(Policy = CenterAccessPolicyNames.Management), HttpPut("tuition/settings"), Consumes("application/json")]
+    /// <summary>
+    /// Owner or manager. Changing the bank account (D7) needs the owner and <c>currentPassword</c>; every owner is emailed.
+    /// </summary>
+    [Authorize(Policy = CenterAccessPolicyNames.Management), EnableRateLimiting("password-authenticated"),
+     HttpPut("tuition/settings"), Consumes("application/json")]
     [ProducesResponseType<ApiResponse<FinanceSettingsDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateSettings(Guid centerId, [FromBody] UpdateFinanceSettingsRequest request,
-        CancellationToken token)
+        [FromServices] FinanceSettingsWorkflow settings, CancellationToken token)
     {
         if (!TryGetActor(out var actor)) return InvalidIdentity();
-        return Done(await workflow.UpdateSettingsAsync(centerId, request.BankBin, request.BankAccountNumber,
-            request.BankAccountName, request.DueDays, request.EmailReminders, request.ExpectedVersion, actor, token));
+        var isOwner = HttpContext.Items[CenterAccessPolicyNames.RoleItemKey] as string == "CenterOwner";
+        var origin = new RequestOrigin(HttpContext.Connection.RemoteIpAddress?.ToString(),
+            Request.Headers.UserAgent.ToString(), HttpContext.TraceIdentifier);
+        return Done(await settings.UpdateAsync(centerId, actor, isOwner, request.BankBin, request.BankAccountNumber,
+            request.BankAccountName, request.DueDays, request.EmailReminders, request.ExpectedVersion, request.CurrentPassword,
+            origin, token));
     }
 }
 

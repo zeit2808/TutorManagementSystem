@@ -457,6 +457,6 @@ Chia thành các PR nhỏ, theo thứ tự:
 | M2 | Các điểm đo ở cuối mục 2 | Có thể đổi nhịp thử lại, chu kỳ kéo, cách dùng `since_id` |
 | M3 | Chuyển gộp: nội dung có 2 mã và số tiền **đúng bằng tổng** hai intent thì tự chia | Đề xuất, chưa chốt. Bớt việc cho nhân viên, cần sửa T6 |
 | M4 | Đổi sang cổng thanh toán có mã đơn chung (vd. PayOS) | Không cần với thiết kế hiện tại; xem lại nếu API SePay không ổn định |
-| M5 | D7 mới áp cho cấu hình SePay (bước 2c). `PUT tuition/settings` (tài khoản nhận học phí, nơi QR chuyển tiền tới) vẫn cho Chủ và QL sửa, không hỏi lại mật khẩu, không email cảnh báo | Cần làm trước khi bật `Auto`: đổi contract nên phải sửa cả frontend |
+| M5 | ~~D7 cho `PUT tuition/settings`~~ **Đã làm (10/11/2026):** đổi tài khoản nhận học phí chỉ Chủ, hỏi lại mật khẩu, ghi `payment_audit_events`, email mọi Chủ; cấu hình SePay đi theo tài khoản mới (bỏ tài khoản thì SePay về `Off`). Quản lý vẫn sửa được hạn đóng và nhắc nợ | Frontend phải gửi `currentPassword` khi đổi tài khoản |
 
 Nguồn: [Tích hợp webhook](https://developer.sepay.vn/vi/sepay-webhooks/tich-hop-webhook) · [Xác thực](https://developer.sepay.vn/vi/sepay-webhooks/xac-thuc) · [Xử lý lỗi](https://developer.sepay.vn/vi/sepay-webhooks/xu-ly-loi) · [API giao dịch](https://docs.sepay.vn/api-giao-dich.html) · [Bảng giá](https://sepay.vn/bang-gia.html)

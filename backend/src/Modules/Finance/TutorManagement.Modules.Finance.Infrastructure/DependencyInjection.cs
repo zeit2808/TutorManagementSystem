@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<TuitionWorkflow>();
         services.AddScoped<PaymentIntentWorkflow>();
         services.AddScoped<PaymentProviderWorkflow>();
+        services.AddScoped<FinanceSettingsWorkflow>();
         services.AddScoped<StudentTuitionQuery>();
         services.AddScoped<IPayrollStore, PayrollStore>();
         services.AddScoped<IPayrollAcademicsReader, PayrollAcademicsReader>();

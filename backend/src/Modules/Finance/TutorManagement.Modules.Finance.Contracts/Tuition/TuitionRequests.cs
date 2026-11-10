@@ -22,5 +22,8 @@ public sealed record AddDiscountRequest(Guid ClassId, string Kind, long Value, D
 /// <summary>H18: reduce one cycle for missed sessions; amount 0 removes the reduction.</summary>
 public sealed record AdjustChargeRequest(long Amount, int? Sessions, string? Reason);
 
+/// <summary>
+/// Changing the bank account (D7) is owner only and needs <c>currentPassword</c>; due days and reminders do not.
+/// </summary>
 public sealed record UpdateFinanceSettingsRequest(string? BankBin, string? BankAccountNumber, string? BankAccountName,
-    int DueDays, bool EmailReminders, int ExpectedVersion);
+    int DueDays, bool EmailReminders, int ExpectedVersion, string? CurrentPassword = null);

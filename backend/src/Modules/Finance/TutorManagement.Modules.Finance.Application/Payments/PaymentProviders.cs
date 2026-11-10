@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using TutorManagement.Application.Abstractions.Clock;
 using TutorManagement.Modules.Finance.Application.Tuition;
@@ -107,13 +106,9 @@ public sealed class PaymentProviderWorkflow(
             return Result<PaymentProviderDto>.Failure(PaymentErrors.InvalidApiToken);
 
         // Checked before anything is read or locked, so a wrong password reveals nothing about the settings.
-        switch (await reauthenticator.VerifyAsync(actorId, currentPassword, origin.ClientIp, origin.UserAgent, origin.TraceId,
-                    token))
-        {
-            case ReauthenticationResult.Verified: break;
-            case ReauthenticationResult.NoLocalPassword: return Result<PaymentProviderDto>.Failure(PaymentErrors.PasswordRequired);
-            default: return Result<PaymentProviderDto>.Failure(PaymentErrors.InvalidPassword);
-        }
+        var rejected = OwnerAlerts.Reject(await reauthenticator.VerifyAsync(actorId, currentPassword, origin.ClientIp,
+            origin.UserAgent, origin.TraceId, token));
+        if (rejected is not null) return Result<PaymentProviderDto>.Failure(rejected);
 
         await using var guard = await store.BeginCenterGuardAsync(centerId, token);
         var settings = await store.FindSettingsAsync(centerId, token);
@@ -149,7 +144,7 @@ public sealed class PaymentProviderWorkflow(
             }
             if (config.BankBin != settings.BankBin || config.AccountNumber != settings.BankAccountNumber)
             {
-                changes.Add($"Tài khoản nhận: {Mask(config.AccountNumber)} → {Mask(settings.BankAccountNumber!)}");
+                changes.Add($"Tài khoản nhận: {OwnerAlerts.Mask(config.AccountNumber)} → {OwnerAlerts.Mask(settings.BankAccountNumber)}");
                 config.ChangeAccount(settings.BankBin!, settings.BankAccountNumber!, actorId, now);
             }
             if (config.Mode != wanted)
@@ -167,7 +162,9 @@ public sealed class PaymentProviderWorkflow(
         await store.AddAsync(PaymentAuditEvent.Record(centerId, actorId,
             before is null ? "provider_connected" : "provider_changed", "payment_provider_config", config.Id,
             before, Snapshot(config), now), token);
-        await QueueAlertsAsync(centerId, actorId, changes, now, token);
+        await OwnerAlerts.QueueAsync(store, members, centerId, actorId, "Cấu hình thanh toán SePay vừa thay đổi",
+            "Cấu hình nhận tiền qua SePay của trung tâm vừa được thay đổi.", changes,
+            "đổi mật khẩu ngay, kiểm tra lại cấu hình thanh toán và tạo lại API token, Secret Key trên my.sepay.vn.", now, token);
         try { await store.SaveAsync(token); }
         catch (TuitionPersistenceException error) when (error.ConstraintName == "ux_payment_provider_configs_token")
         { return Result<PaymentProviderDto>.Failure(PaymentErrors.TokenInUse); }
@@ -182,31 +179,6 @@ public sealed class PaymentProviderWorkflow(
         protector.Protect(apiToken, SecretPurposes.ApiToken(centerId, ProviderName)),
         protector.Fingerprint(apiToken, SecretPurposes.ApiTokenFingerprint(ProviderName)),
         protector.ActiveKeyId);
-
-    /// <summary>Every active owner hears about the change, so a stolen session cannot redirect money quietly.</summary>
-    private async Task QueueAlertsAsync(Guid centerId, Guid actorId, IReadOnlyList<string> changes, DateTimeOffset now,
-        CancellationToken token)
-    {
-        var owners = await members.ListActiveUserIdsAsync(centerId, ["CenterOwner"], token);
-        var emails = await store.ReadEmailsAsync([.. owners, actorId], token);
-        if (owners.Count == 0) return;
-        var actor = emails.TryGetValue(actorId, out var actorEmail) ? actorEmail : actorId.ToString();
-        var at = TimeZoneInfo.ConvertTime(now, FinanceTime.Zone).ToString("HH:mm dd/MM/yyyy", CultureInfo.InvariantCulture);
-        var body = $"""
-            Cấu hình nhận tiền qua SePay của trung tâm vừa được thay đổi.
-
-            Thời điểm: {at} (giờ Việt Nam)
-            Người thay đổi: {actor}
-            Nội dung:
-            {string.Join('\n', changes.Select(x => "- " + x))}
-
-            Nếu bạn không thực hiện thay đổi này: đổi mật khẩu ngay, kiểm tra lại cấu hình thanh toán
-            và tạo lại API token, Secret Key trên my.sepay.vn.
-            """;
-        var outgoing = owners.Where(emails.ContainsKey)
-            .Select(x => new OutgoingTuitionEmail(emails[x], "Cấu hình thanh toán SePay vừa thay đổi", body)).ToArray();
-        await store.QueueEmailsAsync(outgoing, token);
-    }
 
     private static PaymentProviderDto View(PaymentProviderConfig? config, FinanceSettings? settings) =>
         config is null
@@ -246,6 +218,4 @@ public sealed class PaymentProviderWorkflow(
     private static bool IsValid(string value, int max) =>
         value.Length >= PaymentErrors.MinSecretLength && value.Length <= max && !value.Any(char.IsWhiteSpace) &&
         !value.Any(char.IsControl);
-
-    private static string Mask(string account) => account.Length <= 4 ? account : new string('*', account.Length - 4) + account[^4..];
 }

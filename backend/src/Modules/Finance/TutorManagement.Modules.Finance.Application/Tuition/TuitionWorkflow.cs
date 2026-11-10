@@ -294,26 +294,6 @@ public sealed class TuitionWorkflow(ITuitionStore store, ITuitionAcademicsReader
             : await StudentViewAsync(ledger, student, today, token);
     }
 
-    public async Task<Result<FinanceSettingsDto>> UpdateSettingsAsync(Guid centerId, string? bankBin, string? accountNumber,
-        string? accountName, int dueDays, bool emailReminders, int expectedVersion, Guid actorId, CancellationToken token)
-    {
-        if (!FinanceSettings.IsValid(bankBin, accountNumber, accountName, dueDays))
-            return Result<FinanceSettingsDto>.Failure(TuitionErrors.InvalidSettings);
-        await using var guard = await store.BeginCenterGuardAsync(centerId, token);
-        var settings = await store.FindSettingsAsync(centerId, token);
-        if ((settings?.Version ?? 0) != expectedVersion) return Result<FinanceSettingsDto>.Failure(TuitionErrors.SettingsVersion);
-        if (settings is null)
-        {
-            settings = FinanceSettings.Default(centerId);
-            await store.AddAsync(settings, token);
-        }
-        settings.Update(bankBin, accountNumber, accountName, dueDays, emailReminders, actorId, clock.UtcNow);
-        try { await store.SaveAsync(token); }
-        catch (TuitionPersistenceException) { return Result<FinanceSettingsDto>.Failure(TuitionErrors.SettingsVersion); }
-        await guard.CommitAsync(token);
-        return Result<FinanceSettingsDto>.Success(Settings(settings));
-    }
-
     // ---------------- helpers ----------------
 
     private async Task<(CenterLedger Ledger, DateOnly Today)> SyncedAsync(Guid centerId, CancellationToken token)
@@ -377,7 +357,7 @@ public sealed class TuitionWorkflow(ITuitionStore store, ITuitionAcademicsReader
         };
     }
 
-    private static FinanceSettingsDto Settings(FinanceSettings x) => new()
+    internal static FinanceSettingsDto Settings(FinanceSettings x) => new()
     {
         BankBin = x.BankBin, BankAccountNumber = x.BankAccountNumber, BankAccountName = x.BankAccountName,
         DueDays = x.DueDays, EmailReminders = x.EmailReminders, Version = x.Version
