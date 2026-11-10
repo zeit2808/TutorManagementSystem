@@ -12,4 +12,6 @@ public static class SecurityAuditEventTypes
     public const string PasswordChanged = "password_changed";
     public const string LogoutAll = "logout_all";
     public const string RefreshReuseDetected = "refresh_reuse_detected";
+    public const string Reauthenticated = "reauthenticated";
+    public const string ReauthenticationFailed = "reauthentication_failed";
 }

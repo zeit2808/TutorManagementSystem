@@ -84,6 +84,8 @@ public static class DependencyInjection
             TutorManagement.Modules.IdentityAccess.Infrastructure.Email.PlatformEmailService>();
         services.AddScoped<TutorManagement.Modules.IdentityAccess.Contracts.Members.ICenterMemberDirectory, CenterMemberDirectory>();
         services.AddScoped<TutorManagement.Modules.IdentityAccess.Contracts.Members.IUserDirectory, UserDirectory>();
+        services.AddScoped<TutorManagement.Modules.IdentityAccess.Contracts.Authentication.IPasswordReauthenticator,
+            TutorManagement.Modules.IdentityAccess.Application.Authentication.Reauthentication.PasswordReauthenticator>();
         services.AddScoped<CenterMemberWorkflow>();
         services.AddScoped<PlatformInvitationWorkflow>();
         services.AddScoped<IQueryHandler<GetCurrentUserQuery, CurrentUserDto>, GetCurrentUserQueryHandler>();
