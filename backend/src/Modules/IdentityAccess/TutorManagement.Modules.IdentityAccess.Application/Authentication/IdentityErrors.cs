@@ -59,6 +59,25 @@ public static class IdentityErrors
         "The phone number is invalid.",
         "phoneNumber");
 
+    public static readonly Error InvalidDisplayName = new(
+        "invalid_display_name", "The display name must be at most 100 characters.", "displayName");
+
+    public static readonly Error PhoneNumberRequired = new(
+        "phone_number_required", "Staff accounts must keep a phone number.", "phoneNumber");
+
+    public static readonly Error EmailUnchanged = new(
+        "email_unchanged", "The new email is the current sign-in email.", "newEmail");
+
+    public static readonly Error EmailChangeRequiresPassword = new(
+        "email_change_requires_password",
+        "This account signs in with Google only; its email follows the Google account.");
+
+    public static readonly Error EmailChangeTooFrequent = new(
+        "email_change_too_frequent", "A code was sent moments ago. Wait a minute before asking for another one.");
+
+    public static readonly Error InvalidEmailChangeOtp = new(
+        "invalid_email_change_otp", "The code is invalid, expired, or has already been used.", "otp");
+
     public static readonly Error InvalidEmailVerificationToken = new(
         "invalid_email_verification_token",
         "The email verification token is invalid, expired, or has already been used.");

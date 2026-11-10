@@ -31,6 +31,9 @@ public static class DependencyInjection
             IValidator<ResendVerificationEmailRequest>,
             ResendVerificationEmailRequestValidator>();
         builder.Services.AddScoped<IValidator<VerifyEmailRequest>, VerifyEmailRequestValidator>();
+        builder.Services.AddScoped<IValidator<UpdateMyProfileRequest>, UpdateMyProfileRequestValidator>();
+        builder.Services.AddScoped<IValidator<RequestEmailChangeRequest>, RequestEmailChangeRequestValidator>();
+        builder.Services.AddScoped<IValidator<ConfirmEmailChangeRequest>, ConfirmEmailChangeRequestValidator>();
         builder.Services.AddScoped<IValidator<InviteCenterOwnerRequest>, InviteCenterOwnerRequestValidator>();
         builder.Services.AddScoped<
             IValidator<AcceptCenterInvitationRequest>,

@@ -13,7 +13,7 @@ public sealed class CurrentUserReader(IdentityDbContext dbContext) : ICurrentUse
             .Where(x => x.Id == userId && x.IsActive)
             .Select(x => new
             {
-                x.Id, x.Username, x.Email, x.EmailVerifiedAtUtc, x.PasswordHash,
+                x.Id, x.Username, x.DisplayName, x.Email, x.PhoneNumber, x.EmailVerifiedAtUtc, x.PasswordHash,
                 Roles = x.UserRoles.Select(role => role.Role.Name).ToList()
             })
             .SingleOrDefaultAsync(cancellationToken);
@@ -21,7 +21,7 @@ public sealed class CurrentUserReader(IdentityDbContext dbContext) : ICurrentUse
 
         var hasGoogle = await dbContext.ExternalLogins.AsNoTracking()
             .AnyAsync(x => x.UserId == userId && x.Issuer == GoogleIssuer, cancellationToken);
-        return new CurrentUserDto(user.Id, user.Username, user.Email, user.EmailVerifiedAtUtc != null,
+        return new CurrentUserDto(user.Id, user.Username, user.DisplayName, user.Email, user.PhoneNumber, user.EmailVerifiedAtUtc != null,
             user.Roles.Order(StringComparer.Ordinal).ToArray(),
             !string.IsNullOrWhiteSpace(user.PasswordHash), hasGoogle);
     }

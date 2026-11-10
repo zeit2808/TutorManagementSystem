@@ -37,6 +37,9 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(user => user.PhoneNumber)
             .HasDatabaseName("ux_users_phone_number")
             .IsUnique();
+        builder.Property(user => user.DisplayName)
+            .HasColumnName("display_name")
+            .HasMaxLength(100);
         builder.Property(user => user.PasswordHash)
             .HasColumnName("password_hash")
             .HasMaxLength(512);
