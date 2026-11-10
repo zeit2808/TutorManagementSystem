@@ -49,6 +49,7 @@ Mặc định, đổi được nếu bạn muốn:
 | Hồ sơ gộp (M3): `ledger.Resolve` trỏ về hồ sơ giữ lại | Khớp mã xong phải `Resolve`, nếu không tiền vào hồ sơ đã bị gộp |
 | API đặt `ReturnHttpNotAcceptable = true` và bộ lọc `Produces` chung | Webhook phải trả body cố định, tránh 406 tuỳ header `Accept` của SePay |
 | Chưa có mã hoá secret. API và Worker là hai process | Cần khoá dùng chung cho cả hai (T10) |
+| `ICenterMemberDirectory` chỉ có `FindActiveAsync(center, user)`, không liệt kê được Chủ của một trung tâm; Finance chưa biết ai là Chủ | Thêm `ListActiveUserIdsAsync(centerId, roles)` vào contract của IdentityAccess, đăng ký bản đọc này trong Worker, rồi lấy email qua `ReadEmailsAsync` sẵn có. Trung tâm không có Chủ nào có email → ghi log và đếm vào chỉ số, không chặn xử lý |
 
 **SePay, đã thử trên sandbox (Đợt 0, tháng 11/2026)**
 
@@ -63,7 +64,15 @@ Mặc định, đổi được nếu bạn muốn:
 | Payload thử dùng `id` giả như 0 | Chuông có `id <= 0` chỉ ghi nhật ký |
 | Giá: FREE 50 giao dịch/tháng, STARTUP từ 120.000đ/tháng; gói SHOP **không có API** | Trung tâm phải dùng gói có API |
 
-**Còn phải đo ở Đợt 2:** độ trễ từ lúc webhook đến tới lúc API v2 trả giao dịch; `since_id` có đi đúng thứ tự không; giới hạn 3 request/giây tính theo token hay theo tài khoản; `referenceCode` trên tài khoản ngân hàng thật.
+**Còn phải đo ở Đợt 2, trước khi viết code (bước 2a):**
+
+1. `id` API v2 giữ nguyên qua nhiều lần kéo (K20). **Không đạt thì dừng và xem lại thiết kế.**
+2. `since_id` với `id` dạng UUID có trả đúng các giao dịch mới theo thứ tự ghi nhận không.
+3. API v2 có lọc theo ngày không (cần cho quét lại 3 ngày mỗi đêm). Không có thì quét lùi theo trang đến khi gặp giao dịch cũ hơn 3 ngày.
+4. Webhook gửi lại có mang `X-SePay-Timestamp` mới không. Nếu giữ timestamp cũ thì cửa sổ 300 giây sẽ chặn mọi lần gửi lại (xem "Cửa sổ timestamp" ở mục 3).
+5. Độ trễ từ lúc webhook đến tới lúc API v2 thấy giao dịch.
+6. Giới hạn 3 request/giây tính theo token hay theo tài khoản.
+7. Tên trường mã ngân hàng trong API v2 (để tạo `bank_code`) và `referenceCode` trên tài khoản ngân hàng thật.
 
 ## 3. Kiến trúc
 
@@ -72,22 +81,27 @@ Mặc định, đổi được nếu bạn muốn:
 Học sinh/NV chọn khoản → PaymentIntent (mã, số tiền, ảnh chụp thông tin TK) → chuỗi VietQR → ứng dụng ngân hàng
 
 [Chuông]
-SePay → POST /payments/webhooks/sepay/{endpointKey}
-         ├ tìm cấu hình → kiểm HMAC + timestamp
-         ├ ghi nhật ký chuông (trùng id webhook thì tăng delivery_count)
-         ├ đánh dấu cấu hình "cần kéo" (pull_requested_at = now)
-         ├ ghi được → 200 {"success": true}; ghi lỗi → 500 để SePay gửi lại
-         └ chữ ký sai → 401, chỉ đếm, không đánh dấu
+SePay → POST /payments/webhooks/sepay/{endpointKey}   (body tối đa 64 KB)
+         ├ endpointKey không tồn tại → 404, body rỗng, không ghi gì
+         ├ chữ ký hoặc timestamp sai → 401, chỉ tăng bộ đếm trên cấu hình, KHÔNG ghi dòng nào
+         ├ chữ ký đúng → một transaction:
+         │    ghi nhật ký chuông (trùng id webhook thì tăng delivery_count)
+         │    nếu mode <> Off: đánh dấu cần kéo (pull_requested_at = now, next_pull_at = now)
+         └ ghi được → 200 {"success": true}; ghi lỗi → 500 để SePay gửi lại
 
 [Kéo — nguồn sự thật]  PaymentFetcher, chạy trong PaymentWorker
-  1. Nhận cấu hình cần kéo (có chuông mới, hoặc đã quá 5 phút) bằng lease + FOR UPDATE SKIP LOCKED;
-     mỗi cấu hình cách nhau tối thiểu 1 giây giữa hai lần kéo
+  1. Nhận cấu hình có next_pull_at <= now và last_pulled_at <= now - 1 giây,
+     bằng lease + FOR UPDATE SKIP LOCKED. Mọi nhịp kéo đều lưu trong DB, Worker khởi động lại không mất:
+       - có chuông: next_pull_at = now
+       - không có gì: next_pull_at = last_pulled_at + 5 phút
+       - có chuông mà API chưa thấy giao dịch mới: pull_retry_count + 1,
+         next_pull_at = now + 1, 3, 10, 30 giây; hết 4 lần thì về nhịp 5 phút
   2. Ngoài transaction: GET /v2/transactions?since_id=<con trỏ>, qua bộ giới hạn 3 req/giây
   3. Một transaction: INSERT bank_transactions ON CONFLICT (provider, provider_txn_id) DO NOTHING
      (trùng thì tăng seen_count, so checksum), dời con trỏ, commit.
      Con trỏ chỉ dời khi đã ghi xong, nên lỗi giữa chừng không làm mất giao dịch
   4. Chiều tiền hoặc trường lạ chưa biết → lưu với trạng thái Failed, email Chủ, không ghi tiền
-  5. Có chuông mà API chưa thấy giao dịch mới → kéo lại sau 1, 3, 10, 30 giây
+  5. Kéo được giao dịch mới thì pull_retry_count = 0
 
 [Ghi sổ]  PaymentBooker, chạy trong PaymentWorker
   1. Transaction ngắn: nhận tối đa 50 dòng Received bằng FOR UPDATE SKIP LOCKED, ghi lease, commit
@@ -96,10 +110,15 @@ SePay → POST /payments/webhooks/sepay/{endpointKey}
      đọc mã → khớp → tạo biên lai + phân bổ + đổi trạng thái + xếp email outbox
   4. Commit
 
-[Đối soát]  Mỗi đêm quét lại 3 ngày gần nhất bằng đúng hàm Kéo, rồi so tổng (K17)
+[Đối soát]  Mỗi đêm quét lại 3 ngày gần nhất bằng đúng hàm Kéo (lọc theo ngày, hoặc quét lùi
+            theo trang nếu API không lọc được), rồi so tổng (K17)
 ```
 
 Webhook, kéo định kỳ và đối soát **đi chung một đường** (bước Kéo), nên chỉ có một khoá chống trùng và một bộ test. Mẫu này gọi là *thin webhook / fetch-on-notify*.
+
+**Cửa sổ timestamp.** Mặc định ±300 giây theo tài liệu SePay. Chuông không ghi được tiền, nên một webhook thật bị phát lại chỉ gây thêm một lần kéo; cửa sổ này chỉ để chống spam. Nếu bước đo 4 cho thấy SePay gửi lại với timestamp cũ, nới cửa sổ lên 6 giờ (lớn hơn mốc 5 giờ SePay ngừng gửi lại). Dù chuông bị chặn, kéo định kỳ 5 phút vẫn lấy được giao dịch.
+
+**Giới hạn tốc độ khi chạy nhiều Worker.** Mỗi cấu hình chỉ một Worker kéo tại một thời điểm (lease), và khoảng cách tối thiểu 1 giây giữa hai lần kéo lưu trong DB (`last_pulled_at`), nên đúng với bất kỳ số Worker nào. Token bucket trong bộ nhớ chỉ dàn đều các trang trong **một** lần kéo, mà một lần kéo luôn nằm trong một process. Giả định: mỗi token SePay chỉ thuộc một cấu hình; hai cấu hình dùng chung token bị chặn bằng unique trên `api_token_fingerprint`.
 
 **Nguyên tắc thiết kế**
 
@@ -126,9 +145,9 @@ Pháp lý: tiền về thẳng tài khoản trung tâm, nền tảng không gi�
 | **DB làm queue** | **Có**, Postgres là hàng đợi duy nhất | Cờ `pull_requested_at` trên cấu hình cho bước Kéo; `bank_transactions` cho bước Ghi sổ |
 | **Nhận việc bằng lease** | **Có**, theo đúng mẫu `EmailOutboxProcessor` | `FOR UPDATE SKIP LOCKED`, ghi `processing_id` + `processing_until_utc` (2 phút), commit rồi mới gọi SePay. Worker chết thì lease hết hạn, việc được nhận lại. Mỗi cấu hình chỉ một worker kéo tại một thời điểm |
 | **Inbox** | **Có**, `bank_transactions` chính là Inbox | Chỉ bước Kéo ghi vào đây. Mọi xử lý tiền bắt đầu từ bảng này |
-| **Nhật ký chuông** | **Có**, `payment_webhook_deliveries` | Lưu nguyên body, kết quả kiểm chữ ký, `delivery_count`, `last_seen_at`. Chỉ để tra soát và đo, không ghi tiền |
-| **Gom chuông** | **Có** | Nhiều chuông trong lúc đang kéo chỉ dẫn tới một lần kéo tiếp theo |
-| **Giới hạn tốc độ gọi SePay** | **Có**, token bucket 3 request/giây theo token | Chờ khi hết lượt, không tính là lỗi |
+| **Nhật ký chuông** | **Có**, `payment_webhook_deliveries` | **Chỉ lưu chuông ký đúng**: nguyên body, `delivery_count`, `last_seen_at`. Chuông sai chữ ký chỉ tăng `invalid_signature_count` trên cấu hình, nên kẻ xấu không chiếm trước được `webhook_id` và không làm đầy ổ đĩa. Chỉ để tra soát và đo, không ghi tiền |
+| **Gom chuông** | **Có**, cờ trong DB | Nhiều chuông trong lúc đang kéo chỉ đặt lại `next_pull_at`, dẫn tới một lần kéo tiếp theo |
+| **Giới hạn tốc độ gọi SePay** | **Có** | Khoảng cách 1 giây giữa hai lần kéo lưu trong DB; token bucket 3 request/giây trong một lần kéo. Chờ khi hết lượt, không tính là lỗi. Xem "Giới hạn tốc độ khi chạy nhiều Worker" |
 | **Xử lý xong có xoá không** | **Không xoá**, kể cả `raw_payload` | Đây là chứng từ tiền. Xong thì đổi trạng thái |
 | **Outbox** | **Có**, dùng lại `iam.email_outbox_messages` qua `QueueEmailsAsync` | Email xác nhận và email cảnh báo được xếp trong cùng transaction với thay đổi gây ra chúng |
 | **Idempotency** | **Có**, ở từng tầng (bảng dưới) | Đảm bảo bằng ràng buộc DB, không chỉ bằng code |
@@ -149,7 +168,7 @@ Pháp lý: tiền về thẳng tài khoản trung tâm, nền tảng không gi�
 | Tầng | Khoá chống trùng | Khi trùng |
 |---|---|---|
 | Tạo QR | Cùng học sinh + cùng khoản + cùng số tiền + còn hạn, kiểm tra trong khoá trung tâm | Trả lại intent cũ |
-| Chuông | Unique `(config_id, webhook_id)` trên nhật ký chuông | Tăng `delivery_count`, vẫn trả `{"success": true}` |
+| Chuông | Unique `(config_id, webhook_id)` trên nhật ký chuông, chỉ chuông ký đúng | Tăng `delivery_count`, vẫn trả `{"success": true}` |
 | Kéo / kéo định kỳ / đối soát | **Unique `(provider, provider_txn_id)`**, không kèm `config_id` (xem "Phạm vi khoá"), `provider_txn_id` = `id` API v2, `ON CONFLICT DO NOTHING` | Bỏ qua, chỉ so checksum |
 | Worker chạy lại | Trạng thái kiểm tra trong khoá + partial unique trên `receipts` | Bỏ qua |
 | Gán tay | `expectedVersion` + partial unique trên `receipts` | Gán lặp cùng học sinh trả biên lai cũ; khác học sinh báo xung đột |
@@ -181,7 +200,7 @@ Khoá ở inbox chặn trùng lúc nhận. Nhưng tác động thật là **biê
 - Partial unique `bank_transaction_id WHERE voided_at_utc IS NULL`: mỗi giao dịch có tối đa **một biên lai còn hiệu lực**.
 - Partial unique `bank_transaction_id WHERE source = 'Auto'`, **tính cả biên lai đã huỷ**: mỗi giao dịch được **tự ghi tối đa một lần trong đời**. Nhân viên đã huỷ biên lai tự động thì chỉ người mới gán lại được. Một lần phát lại không thể tự ghi lại, làm mất quyết định huỷ của nhân viên.
 - Email xếp trong cùng transaction với biên lai, nên không có biên lai mới thì không có email mới.
-- Không có kho chống trùng nào nằm trong bộ nhớ hay Redis. Bộ đếm token bucket và cờ gom chuông ở trong bộ nhớ chỉ là tối ưu: mất đi thì chỉ gọi API thừa, không ghi trùng.
+- Không có kho chống trùng nào nằm trong bộ nhớ hay Redis. Token bucket trong bộ nhớ chỉ là tối ưu: mất đi thì chỉ phải chờ hoặc gọi lại API, không ghi trùng. Cờ gom chuông và nhịp kéo nằm trong DB.
 
 **Đảm bảo tổng thể:** API SePay có thể trả một giao dịch nhiều lần, hệ thống chống trùng bằng một khoá ở mọi đường, nên **mỗi giao dịch được ghi đúng một lần**.
 
@@ -266,16 +285,18 @@ Một màn hình, một câu hỏi: **tiền này của học sinh nào?** Luôn
 
 | Bảng | Cột chính | Ràng buộc |
 |---|---|---|
-| `payment_provider_configs` | id, center_id, provider, endpoint_key, webhook_secret (mã hoá), api_token (mã hoá), key_id, bank_bin, account_number, mode (`Off`/`Shadow`/`Auto`), auto_since_utc, pull_requested_at, last_pulled_at, pull_cursor, pull_processing_id, pull_processing_until_utc, last_pull_error, version | unique `(center_id, provider)`; unique `endpoint_key`; partial unique `(bank_bin, account_number) WHERE mode = 'Auto'`; partial index cấu hình cần kéo |
-| `payment_webhook_deliveries` | id, config_id, webhook_id, signature_valid, raw_body, delivery_count, first_seen_at, last_seen_at | unique `(config_id, webhook_id)`; chỉ INSERT/UPDATE đếm |
+| `payment_provider_configs` | id, center_id, provider, endpoint_key, webhook_secret (mã hoá), api_token (mã hoá), api_token_fingerprint (HMAC của token, không giải mã được), key_id, bank_bin, account_number, mode (`Off`/`Shadow`/`Auto`), auto_since_utc, pull_requested_at, next_pull_at, pull_retry_count, last_pulled_at, pull_cursor, pull_processing_id, pull_processing_until_utc, last_pull_error, invalid_signature_count, last_invalid_signature_at, version | unique `(center_id, provider)`; unique `endpoint_key`; unique `(provider, api_token_fingerprint)`; partial unique `(bank_bin, account_number) WHERE mode = 'Auto'`; partial index `next_pull_at WHERE mode <> 'Off'` |
+| `payment_webhook_deliveries` | id, config_id, webhook_id, reference_code, amount, raw_body, delivery_count, first_seen_at, last_seen_at | unique `(config_id, webhook_id)`; **chỉ chuông ký đúng**; chỉ INSERT/UPDATE đếm. `reference_code`, `amount` để đối soát chuông ↔ API |
 | `payment_intents` | id, center_id, student_id, code, amount, charge_ids, bank_bin, account_number, account_name, status (`Pending`/`Cancelled`, `Paid` thêm ở Đợt 3; hết hạn suy ra từ `expires_at_utc`), expires_at_utc, cancelled_at_utc, created_by_user_id | unique `code` toàn hệ thống; check `amount > 0` |
-| `bank_transactions` | id, config_id, center_id, provider_txn_id (`id` API v2), reference_code, account_number, amount, content, transacted_at_utc, raw_payload (jsonb), semantic_key, duplicate_of_id, payload_checksum, fetched_by (`Doorbell`/`Periodic`/`Nightly`/`Manual`), first_seen_at, last_seen_at, seen_count, booked_at, status, review_reason, ignore_reason, intent_id, student_id, attempt_count, next_attempt_at, processing_id, processing_until_utc, last_error, version | **unique `(provider, provider_txn_id)`**; **unique `semantic_key`** (null được phép, khi `referenceCode` rỗng hoặc dòng `Held`); check `amount > 0`; partial index theo trạng thái chờ; index `(center_id, transacted_at_utc)` và `(center_id, amount)` để tra khi phụ huynh hỏi |
+| `bank_transactions` | id, config_id, center_id, **provider**, provider_txn_id (`id` API v2), **bank_code** (mã ngân hàng SePay trả, chuẩn hoá), **bank_bin** (lấy từ cấu hình khi số TK khớp; TK khác thì null), reference_code, account_number, amount, content, transacted_at_utc, raw_payload (jsonb), semantic_key, duplicate_of_id, payload_checksum, fetched_by (`Doorbell`/`Periodic`/`Nightly`/`Manual`), first_seen_at, last_seen_at, seen_count, booked_at, status, review_reason, ignore_reason, intent_id, student_id, attempt_count, next_attempt_at, processing_id, processing_until_utc, last_error, version, **shadow_outcome, shadow_reason, shadow_intent_id, shadow_student_id, shadow_evaluated_at** (kết quả dự kiến ở `Shadow`: thêm cột ngay ở Đợt 2, điền từ Đợt 3) | **unique `(provider, provider_txn_id)`**; **unique `semantic_key`** (null được phép, khi `referenceCode` rỗng hoặc dòng `Held`); check `amount > 0`; partial index theo trạng thái chờ; index `(center_id, transacted_at_utc)` và `(center_id, amount)` để tra khi phụ huynh hỏi |
 | `receipts` (sửa) | thêm `bank_transaction_id`, `source` (`Manual`/`Auto`) | **partial unique `bank_transaction_id WHERE bank_transaction_id IS NOT NULL AND voided_at_utc IS NULL`**; **partial unique `bank_transaction_id WHERE source = 'Auto'`** (tính cả biên lai đã huỷ) |
 | `payment_audit_events` | center_id, actor, action, target, before, after, at | chỉ INSERT |
 
 Partial unique thứ nhất cho phép huỷ rồi gán lại, nhưng một giao dịch **chỉ có tối đa một biên lai còn hiệu lực** ở mức DB. Partial unique thứ hai khiến giao dịch **chỉ được tự ghi một lần trong đời**.
 
-Một số TK chỉ được bật tự động ở một trung tâm, để cùng một khoản tiền không vào hai sổ: partial unique `(bank_bin, account_number) WHERE mode = 'Auto'` trên `payment_provider_configs` (thêm cột `bank_bin`).
+Một số TK chỉ được bật tự động ở một trung tâm, để cùng một khoản tiền không vào hai sổ: partial unique `(bank_bin, account_number) WHERE mode = 'Auto'` trên `payment_provider_configs`.
+
+`semantic_key` = `bank_code|account_number|reference_code` sau khi chuẩn hoá (viết hoa, bỏ khoảng trắng); null khi `reference_code` rỗng. Dùng `bank_code` của SePay chứ không dùng `bank_bin`, vì giao dịch của TK lạ không có `bank_bin`.
 
 ## 5. API (prefix `/api/v1`)
 
@@ -283,14 +304,14 @@ Một số TK chỉ được bật tự động ở một trung tâm, để cùn
 |---|---|---|
 | `POST centers/{c}/students/{id}/payment-intents` | Chủ, QL, NV | `{chargeIds?}`, trả `{code, amount, transferContent, qrPayload, bank, chargeIds, expiresAtUtc}` |
 | `POST me/tuition/students/{id}/payment-intents` | Học sinh | Như trên, chỉ hồ sơ của mình |
-| `POST payments/webhooks/sepay/{endpointKey}` | Anonymous + HMAC | Rate limit riêng, giới hạn body, đọc raw body |
+| `POST payments/webhooks/sepay/{endpointKey}` | Anonymous + HMAC | Rate limit riêng, body tối đa 64 KB, đọc raw body. Trả 200 `{"success": true}`; 401 khi sai chữ ký hoặc timestamp; 404 body rỗng khi không có `endpointKey`; 500 khi không ghi được |
 | `GET centers/{c}/bank-transactions?status=` | Chủ, QL, NV | Hàng chờ, kèm gợi ý học sinh |
 | `POST centers/{c}/bank-transactions/{id}/assign` | Chủ, QL, NV | `{studentId, chargeIds?, expectedVersion}` |
 | `POST centers/{c}/bank-transactions/{id}/ignore` | Chủ, QL | `{reason, expectedVersion}` |
 | `POST centers/{c}/bank-transactions/{id}/retry` | Chủ | Chỉ cho `Failed` |
 | `POST centers/{c}/bank-transactions/{id}/resolve-held` | Chủ | `{isDuplicate, reason, expectedVersion}`, chỉ cho `Held` |
 | `POST centers/{c}/tuition/payment-provider/pull` | Chủ, QL | Kéo ngay, không chờ chu kỳ |
-| `GET/PUT centers/{c}/tuition/payment-provider` | Xem: Chủ, QL · Sửa: Chủ | Không bao giờ trả secret về client |
+| `GET/PUT centers/{c}/tuition/payment-provider` | Xem: Chủ, QL · Sửa: Chủ | Không bao giờ trả secret về client. Ở Đợt 2 chỉ nhận `mode` là `Off` hoặc `Shadow`; `Auto` bị từ chối đến khi có bước ghi sổ (Đợt 3) |
 | `GET centers/{c}/tuition/reconciliation?from&to` | Chủ, QL | Tổng tiền vào, tổng biên lai, danh sách lệch |
 
 `endpointKey` chỉ để định tuyến, có thể xuất hiện trong log; **secret là khoá HMAC**.
@@ -366,13 +387,19 @@ Một số TK chỉ được bật tự động ở một trung tâm, để cùn
 - Tái dùng intent còn hiệu lực nếu cùng khoản và cùng số tiền; số nợ đổi thì tạo mới.
 
 ### Đợt 2 — Kết nối và nhận giao dịch
-- `payment_provider_configs`, mã hoá secret, màn cấu hình.
-- Webhook: xác thực, nhật ký chuông, cờ cần kéo.
-- `PaymentFetcher`: kéo API v2, giới hạn tốc độ, lease theo cấu hình, kéo định kỳ, `bank_transactions` với checksum.
-- Bảo vệ đổi TK ngân hàng (D7), audit.
-- Đo các điểm còn mở ở cuối mục 2.
 
-**Xong khi:** giao dịch sandbox nằm trong `bank_transactions` vài giây sau khi chuyển; gửi lại webhook không tạo dòng mới; chữ ký sai bị từ chối; tắt webhook thì kéo định kỳ vẫn lấy đủ; webhook giả không tạo dòng nào; **`id` API giữ nguyên qua nhiều lần kéo** (K20); worker chết giữa lúc kéo thì lần sau không mất, không trùng. **Chưa ghi tiền.**
+Chia thành các PR nhỏ, theo thứ tự:
+
+| Bước | Nội dung |
+|---|---|
+| **2a** | **Đo trên sandbox trước** các điểm ở cuối mục 2. Điểm 1 không đạt thì dừng |
+| **2b** | Domain + migration: `payment_provider_configs`, `payment_webhook_deliveries`, `bank_transactions` (kể cả cột `shadow_*`), `payment_audit_events`. Dịch vụ mã hoá AES-256-GCM có `key_id`, dùng chung API và Worker. Contract `ListActiveUserIdsAsync` để lấy Chủ |
+| **2c** | `GET/PUT payment-provider`: chỉ Chủ sửa, nhập lại mật khẩu (D7), email cảnh báo, audit, không trả secret. **Chỉ cho `Off`/`Shadow`** |
+| **2d** | Webhook: raw body, HMAC constant-time, cửa sổ timestamp, 401/404/500, body cố định tránh 406, rate limit, đánh dấu cần kéo |
+| **2e** | `IBankFeedProvider` + SePay v2 client, `PaymentFetcher` trong `PaymentWorker` riêng: nhịp kéo lưu DB, lease, hai lớp khoá, checksum, `Held`, kéo định kỳ, endpoint `pull` |
+| **2f** | Test: unit (HMAC, checksum, giờ VN → UTC, `semantic_key`), Postgres thật (kéo lặp, hai worker song song, lease hết hạn, Worker khởi động lại vẫn giữ nhịp kéo, `Held`), SePay giả lập trả trùng/429/500, snapshot OpenAPI |
+
+**Xong khi:** giao dịch sandbox nằm trong `bank_transactions` vài giây sau khi chuyển; gửi lại webhook không tạo dòng mới; chữ ký sai bị từ chối và không tạo dòng nhật ký; không bật được `Auto`; tắt webhook thì kéo định kỳ vẫn lấy đủ; webhook giả không tạo dòng nào; **`id` API giữ nguyên qua nhiều lần kéo** (K20); worker chết giữa lúc kéo thì lần sau không mất, không trùng. **Chưa ghi tiền.**
 
 ### Đợt 3 — Khớp và ghi biên lai
 - Parser, bộ khớp, tách phần ghi sổ dùng chung, tài khoản hệ thống, `PaymentBooker`, thay đổi ở `receipts`.
