@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TutorManagement.Modules.Finance.Domain.Payments;
 using TutorManagement.Modules.Finance.Domain.Payroll;
 using TutorManagement.Modules.Finance.Domain.Tuition;
 
@@ -16,6 +17,10 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
     public DbSet<ReceiptAllocation> ReceiptAllocations => Set<ReceiptAllocation>();
     public DbSet<FinanceSettings> FinanceSettings => Set<FinanceSettings>();
     public DbSet<PaymentIntent> PaymentIntents => Set<PaymentIntent>();
+    public DbSet<PaymentProviderConfig> PaymentProviderConfigs => Set<PaymentProviderConfig>();
+    public DbSet<PaymentWebhookDelivery> PaymentWebhookDeliveries => Set<PaymentWebhookDelivery>();
+    public DbSet<BankTransaction> BankTransactions => Set<BankTransaction>();
+    public DbSet<PaymentAuditEvent> PaymentAuditEvents => Set<PaymentAuditEvent>();
     public DbSet<PayrollConfig> PayrollConfigs => Set<PayrollConfig>();
     public DbSet<PayrollConfigChange> PayrollConfigChanges => Set<PayrollConfigChange>();
     public DbSet<PayRate> PayRates => Set<PayRate>();

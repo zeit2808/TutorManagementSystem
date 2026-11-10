@@ -17,7 +17,7 @@ Trạng thái: **Đợt 0 và Đợt 1 xong; thiết kế nhận tiền đã ch�
 | T12 | API SePay sập lâu | **Chờ**, không bao giờ ghi tiền từ nội dung webhook; email Chủ sau 1 giờ |
 | T13 | Lưu webhook thô | **Giữ mãi**, làm bằng chứng khi đối soát hay tranh chấp |
 | T9 | Giao dịch chỉ thấy qua đối soát | Tự ghi như mọi giao dịch khác, vì cùng một đường xử lý |
-| T10 | Mã hoá secret | AES-256-GCM, khoá `Payments:EncryptionKey` từ biến môi trường, lưu kèm `key_id` |
+| T10 | Mã hoá secret | AES-256-GCM, nonce ngẫu nhiên, mục đích (trung tâm + trường) gắn vào associated data. Khoá từ cấu hình/biến môi trường: `Payments:EncryptionKeys:{id}` (Base64, 32 byte, giữ khoá cũ để giải mã), `Payments:ActiveKeyId`, `Payments:FingerprintKey` (Base64, ≥ 32 byte, không xoay). Mỗi cấu hình lưu `key_id` |
 | T11 | Hàng chờ của nhân viên | Chỉ chứa câu hỏi nghiệp vụ "**tiền này của học sinh nào?**". Lỗi kỹ thuật không vào hàng chờ, hệ thống tự thử lại và email cho Chủ |
 
 Mặc định, đổi được nếu bạn muốn:
