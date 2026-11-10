@@ -81,10 +81,12 @@ Mặc định, đổi được nếu bạn muốn:
 | 1 | **Đạt.** Cùng 3 `id`, cùng thứ tự, cùng dữ liệu nghiệp vụ qua 3 lần gọi danh sách; `GET /v2/transactions/{id}` trả đúng `id` và dữ liệu đó. `id` dạng UUID v1 (theo thời gian), vd. `254cd3a9-d7b0-11f1-...` | Thiết kế đứng được. Mẫu còn nhỏ và trong vài giây: **kiểm lại** sau vài ngày trên cùng giao dịch, và trên tài khoản thật trước khi bật `Auto` |
 | 2 | **Đạt.** `since_id=X` trả đúng các giao dịch mới hơn X, không gồm X. Danh sách luôn mới nhất trước | Khi kéo phải đi hết các trang rồi mới dời con trỏ về `id` **mới nhất** đã ghi |
 | 3 | **Có.** `transaction_date_from` / `transaction_date_to` (`yyyy-MM-dd HH:mm:ss`, giờ VN) lọc đúng | Quét 3 ngày mỗi đêm dùng lọc ngày, không cần quét lùi |
-| 4 | Chưa đo | Đo ở bước 2d khi có endpoint webhook |
+| 4 | **Ký lại với timestamp mới** (đo 10/11/2026: tắt API, giao dịch lúc 11:17:11, SePay tự gửi lại và được nhận lúc 11:31:59 với cửa sổ 300 giây; SePay hiển thị lần thử theo dạng "2/7") | Giữ cửa sổ 300 giây. Chưa đo nút "Gửi lại" bằng tay |
 | 5 | Chưa đo. Một lần gọi danh sách mất khoảng 0,5 giây | Đo ở bước 2e |
 | 6 | Header trả `X-RateLimit-Limit: 3`, `X-RateLimit-Reset: 1` (giây) | Giới hạn 3 request/giây; đọc `X-RateLimit-Remaining` và `Retry-After` khi gặp 429 |
 | 7 | Trường ngân hàng là `bank_brand_name` (vd. `Vietcombank`); `reference_number` có giá trị (`SB...`) trên sandbox | `bank_code` = `bank_brand_name` chuẩn hoá. `reference_number` trên TK thật vẫn phải kiểm |
+
+**Thử webhook thật (bước 2d, 10/11/2026):** chữ ký đúng HMAC-SHA256 trên `{timestamp}.{raw body}`, header `X-SePay-Signature: sha256=<hex>`, `X-SePay-Timestamp` là Unix giây. Cả 3 lần 401 đầu tiên là do Secret Key dán trên SePay khác với Secret đã lưu; log `SePay webhook refused: ...` cho biết ngay lý do (thiếu header, lệch giờ bao nhiêu giây, sai định dạng hay không khớp secret) mà không ghi secret.
 
 **Phát hiện thêm:**
 

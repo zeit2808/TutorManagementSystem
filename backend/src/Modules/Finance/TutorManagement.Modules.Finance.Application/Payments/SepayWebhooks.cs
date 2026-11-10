@@ -32,6 +32,9 @@ public enum WebhookOutcome
     Unauthorized = 3
 }
 
+/// <summary>Why a webhook was refused, safe to log: shapes and clock differences, never the secret or the signature.</summary>
+public sealed record WebhookResult(WebhookOutcome Outcome, string? Reason = null);
+
 public sealed class WebhookOptions
 {
     /// <summary>Allowed clock difference for X-SePay-Timestamp. A doorbell books no money, so this only limits spam.</summary>
@@ -47,39 +50,49 @@ public sealed class SepayWebhookReceiver(IPaymentWebhookStore store, ISecretProt
 {
     private const string SignaturePrefix = "sha256=";
 
-    public async Task<WebhookOutcome> ReceiveAsync(string endpointKey, ReadOnlyMemory<byte> rawBody, string? signature,
+    public async Task<WebhookResult> ReceiveAsync(string endpointKey, ReadOnlyMemory<byte> rawBody, string? signature,
         string? timestamp, CancellationToken token)
     {
         if (endpointKey.Length != PaymentProviderConfig.EndpointKeyLength ||
             !endpointKey.All(x => char.IsAsciiLetterOrDigit(x) || x is '-' or '_'))
-            return WebhookOutcome.NotFound;
+            return new(WebhookOutcome.NotFound);
         var target = await store.FindByEndpointAsync(PaymentProvider.Sepay, endpointKey, token);
-        if (target is null) return WebhookOutcome.NotFound;
+        if (target is null) return new(WebhookOutcome.NotFound);
 
         var now = clock.UtcNow;
-        if (!IsFresh(timestamp, now) || !SignatureMatches(target, rawBody.Span, signature, timestamp!))
+        var refused = CheckTimestamp(timestamp, now) ?? CheckSignature(target, rawBody.Span, signature, timestamp!);
+        if (refused is not null)
         {
             await store.RecordInvalidSignatureAsync(target.ConfigId, now, token);
-            return WebhookOutcome.Unauthorized;
+            return new(WebhookOutcome.Unauthorized, refused);
         }
 
         var body = Encoding.UTF8.GetString(rawBody.Span);
         var (webhookId, reference, amount) = Read(body);
         await store.RecordDeliveryAsync(target.ConfigId, webhookId, reference, amount, body, now, token);
-        return WebhookOutcome.Accepted;
+        return new(WebhookOutcome.Accepted);
     }
 
-    private bool IsFresh(string? timestamp, DateTimeOffset now) =>
-        long.TryParse(timestamp, NumberStyles.None, CultureInfo.InvariantCulture, out var seconds) &&
-        Math.Abs(now.ToUnixTimeSeconds() - seconds) <= options.TimestampToleranceSeconds;
-
-    private bool SignatureMatches(WebhookTarget target, ReadOnlySpan<byte> rawBody, string? signature, string timestamp)
+    private string? CheckTimestamp(string? timestamp, DateTimeOffset now)
     {
-        if (signature is null || !signature.StartsWith(SignaturePrefix, StringComparison.Ordinal)) return false;
+        if (string.IsNullOrEmpty(timestamp)) return "missing X-SePay-Timestamp";
+        if (!long.TryParse(timestamp, NumberStyles.None, CultureInfo.InvariantCulture, out var seconds))
+            return $"X-SePay-Timestamp is not a number (length {timestamp.Length})";
+        var difference = now.ToUnixTimeSeconds() - seconds;
+        return Math.Abs(difference) <= options.TimestampToleranceSeconds
+            ? null
+            : $"X-SePay-Timestamp is {difference} s from now (length {timestamp.Length}, allowed ±{options.TimestampToleranceSeconds} s)";
+    }
+
+    private string? CheckSignature(WebhookTarget target, ReadOnlySpan<byte> rawBody, string? signature, string timestamp)
+    {
+        if (string.IsNullOrEmpty(signature)) return "missing X-SePay-Signature";
+        if (!signature.StartsWith(SignaturePrefix, StringComparison.Ordinal))
+            return $"X-SePay-Signature has no sha256= prefix (length {signature.Length})";
         byte[] given;
         try { given = Convert.FromHexString(signature.AsSpan(SignaturePrefix.Length).Trim()); }
-        catch (FormatException) { return false; }
-        if (given.Length != SHA256.HashSizeInBytes) return false;
+        catch (FormatException) { return $"X-SePay-Signature is not hex (length {signature.Length})"; }
+        if (given.Length != SHA256.HashSizeInBytes) return $"X-SePay-Signature has {given.Length} bytes, expected 32";
 
         var secret = Encoding.UTF8.GetBytes(protector.Unprotect(target.WebhookSecret, target.KeyId,
             SecretPurposes.WebhookSecret(target.CenterId, nameof(PaymentProvider.Sepay))));
@@ -89,7 +102,9 @@ public sealed class SepayWebhookReceiver(IPaymentWebhookStore store, ISecretProt
             Encoding.ASCII.GetBytes(timestamp, signed);
             signed[timestamp.Length] = (byte)'.';
             rawBody.CopyTo(signed.AsSpan(timestamp.Length + 1));
-            return CryptographicOperations.FixedTimeEquals(HMACSHA256.HashData(secret, signed), given);
+            return CryptographicOperations.FixedTimeEquals(HMACSHA256.HashData(secret, signed), given)
+                ? null
+                : $"signature does not match the stored secret (body {rawBody.Length} bytes)";
         }
         finally { CryptographicOperations.ZeroMemory(secret); }
     }

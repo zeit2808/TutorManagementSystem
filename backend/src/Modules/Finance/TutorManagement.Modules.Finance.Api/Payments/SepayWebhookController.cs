@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Logging;
 using TutorManagement.Modules.Finance.Application.Payments;
 
 namespace TutorManagement.Modules.Finance.Api.Payments;
@@ -14,7 +15,7 @@ namespace TutorManagement.Modules.Finance.Api.Payments;
 /// </summary>
 [ApiController, ApiVersion(1.0), ApiExplorerSettings(IgnoreApi = true)]
 [Route("api/v{version:apiVersion}/payments/webhooks/sepay/{endpointKey}")]
-public sealed class SepayWebhookController(SepayWebhookReceiver receiver) : ControllerBase
+public sealed class SepayWebhookController(SepayWebhookReceiver receiver, ILogger<SepayWebhookController> logger) : ControllerBase
 {
     public const int MaxBodyBytes = 64 * 1024;
 
@@ -23,9 +24,10 @@ public sealed class SepayWebhookController(SepayWebhookReceiver receiver) : Cont
     {
         var body = await ReadBodyAsync(token);
         if (body is null) return Json(StatusCodes.Status413PayloadTooLarge, "{\"success\":false}");
-        var outcome = await receiver.ReceiveAsync(endpointKey, body, Request.Headers["X-SePay-Signature"].ToString(),
+        var result = await receiver.ReceiveAsync(endpointKey, body, Request.Headers["X-SePay-Signature"].ToString(),
             Request.Headers["X-SePay-Timestamp"].ToString(), token);
-        return outcome switch
+        if (result.Outcome == WebhookOutcome.Unauthorized) WebhookLog.Refused(logger, result.Reason);
+        return result.Outcome switch
         {
             WebhookOutcome.Accepted => Json(StatusCodes.Status200OK, "{\"success\":true}"),
             WebhookOutcome.Unauthorized => Json(StatusCodes.Status401Unauthorized, "{\"success\":false}"),
@@ -49,4 +51,10 @@ public sealed class SepayWebhookController(SepayWebhookReceiver receiver) : Cont
 
     private static ContentResult Json(int status, string content) =>
         new() { StatusCode = status, ContentType = "application/json", Content = content };
+}
+
+internal static partial class WebhookLog
+{
+    [LoggerMessage(EventId = 7101, Level = LogLevel.Warning, Message = "SePay webhook refused: {Reason}")]
+    public static partial void Refused(ILogger logger, string? reason);
 }
