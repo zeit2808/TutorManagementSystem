@@ -434,6 +434,11 @@ Chia thành các PR nhỏ, theo thứ tự:
 
 **Xong khi:** test song song và kéo lặp không tạo trùng, bất biến K17 đúng, Shadow không có khớp sai.
 
+**3a (xong 10/11/2026):** `PaymentCode.FindIn`, `PaymentMatcher`, `PaymentBooker` ghi `shadow_*` cho trung tâm Shadow, chạy trong `PaymentWorker`. Thử trên sandbox: QR `HPD1KMBCXR4` → chuyển khoản → kéo về → `Book (PaymentCode HPD1KMBCXR4)` đúng học sinh. Lưu ý:
+
+- Shadow đánh giá mỗi giao dịch **một lần**. Đổi tài khoản nhận hay tạo mã QR sau đó không làm đánh giá lại. Bước ghi thật (3b) phải khớp lại ngay lúc ghi, không dùng lại `shadow_*`.
+- Còn cho 3b: cột `bank_transaction_id`, `source` và hai partial unique trên `receipts`; tài khoản hệ thống; tách phần ghi sổ dùng chung; ghi biên lai cho `Auto` từ `auto_since_utc`; xử lý giao dịch `Received` trước mốc đó; mở `Auto` trong API; so kết quả Shadow với biên lai ghi tay.
+
 ### Đợt 4 — Hàng chờ và siết luồng tay
 - Màn "Tiền chưa rõ của ai" với gợi ý, gán, bỏ qua; huỷ biên lai hỏi gán lại.
 - Chặn ghi tay chuyển khoản khi `Auto`.
