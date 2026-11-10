@@ -74,6 +74,24 @@ Mặc định, đổi được nếu bạn muốn:
 6. Giới hạn 3 request/giây tính theo token hay theo tài khoản.
 7. Tên trường mã ngân hàng trong API v2 (để tạo `bank_code`) và `referenceCode` trên tài khoản ngân hàng thật.
 
+**Kết quả đo 2a trên sandbox (10/11/2026, 3 giao dịch thử, chỉ dùng GET)**
+
+| # | Kết quả | Ảnh hưởng |
+|---|---|---|
+| 1 | **Đạt.** Cùng 3 `id`, cùng thứ tự, cùng dữ liệu nghiệp vụ qua 3 lần gọi danh sách; `GET /v2/transactions/{id}` trả đúng `id` và dữ liệu đó. `id` dạng UUID v1 (theo thời gian), vd. `254cd3a9-d7b0-11f1-...` | Thiết kế đứng được. Mẫu còn nhỏ và trong vài giây: **kiểm lại** sau vài ngày trên cùng giao dịch, và trên tài khoản thật trước khi bật `Auto` |
+| 2 | **Đạt.** `since_id=X` trả đúng các giao dịch mới hơn X, không gồm X. Danh sách luôn mới nhất trước | Khi kéo phải đi hết các trang rồi mới dời con trỏ về `id` **mới nhất** đã ghi |
+| 3 | **Có.** `transaction_date_from` / `transaction_date_to` (`yyyy-MM-dd HH:mm:ss`, giờ VN) lọc đúng | Quét 3 ngày mỗi đêm dùng lọc ngày, không cần quét lùi |
+| 4 | Chưa đo | Đo ở bước 2d khi có endpoint webhook |
+| 5 | Chưa đo. Một lần gọi danh sách mất khoảng 0,5 giây | Đo ở bước 2e |
+| 6 | Header trả `X-RateLimit-Limit: 3`, `X-RateLimit-Reset: 1` (giây) | Giới hạn 3 request/giây; đọc `X-RateLimit-Remaining` và `Retry-After` khi gặp 429 |
+| 7 | Trường ngân hàng là `bank_brand_name` (vd. `Vietcombank`); `reference_number` có giá trị (`SB...`) trên sandbox | `bank_code` = `bank_brand_name` chuẩn hoá. `reference_number` trên TK thật vẫn phải kiểm |
+
+**Phát hiện thêm:**
+
+- **Cloudflare chặn client không có User-Agent rõ ràng** (lỗi 1010 với User-Agent mặc định). SePay client phải gửi User-Agent cố định, vd. `TutorManagement/<version>`.
+- Mỗi giao dịch có `bank_account_id` (UUID tài khoản ngân hàng trong SePay), `va` và `va_id` (tài khoản ảo), `transfer_type` (`in`/`out`), `webhook_success`. Lưu `bank_account_id` và `va` vào `bank_transactions`; quy tắc khớp TK phải xét cả số TK chính lẫn VA đã cấu hình. Chiều tiền đọc từ `transfer_type`.
+- Số tiền là số nguyên (`amount_in: 100000`), không phải chuỗi như API v1.
+
 ## 3. Kiến trúc
 
 ```
@@ -288,7 +306,7 @@ Một màn hình, một câu hỏi: **tiền này của học sinh nào?** Luôn
 | `payment_provider_configs` | id, center_id, provider, endpoint_key, webhook_secret (mã hoá), api_token (mã hoá), api_token_fingerprint (HMAC của token, không giải mã được), key_id, bank_bin, account_number, mode (`Off`/`Shadow`/`Auto`), auto_since_utc, pull_requested_at, next_pull_at, pull_retry_count, last_pulled_at, pull_cursor, pull_processing_id, pull_processing_until_utc, last_pull_error, invalid_signature_count, last_invalid_signature_at, version | unique `(center_id, provider)`; unique `endpoint_key`; unique `(provider, api_token_fingerprint)`; partial unique `(bank_bin, account_number) WHERE mode = 'Auto'`; partial index `next_pull_at WHERE mode <> 'Off'` |
 | `payment_webhook_deliveries` | id, config_id, webhook_id, reference_code, amount, raw_body, delivery_count, first_seen_at, last_seen_at | unique `(config_id, webhook_id)`; **chỉ chuông ký đúng**; chỉ INSERT/UPDATE đếm. `reference_code`, `amount` để đối soát chuông ↔ API |
 | `payment_intents` | id, center_id, student_id, code, amount, charge_ids, bank_bin, account_number, account_name, status (`Pending`/`Cancelled`, `Paid` thêm ở Đợt 3; hết hạn suy ra từ `expires_at_utc`), expires_at_utc, cancelled_at_utc, created_by_user_id | unique `code` toàn hệ thống; check `amount > 0` |
-| `bank_transactions` | id, config_id, center_id, **provider**, provider_txn_id (`id` API v2), **bank_code** (mã ngân hàng SePay trả, chuẩn hoá), **bank_bin** (lấy từ cấu hình khi số TK khớp; TK khác thì null), reference_code, account_number, amount, content, transacted_at_utc, raw_payload (jsonb), semantic_key, duplicate_of_id, payload_checksum, fetched_by (`Doorbell`/`Periodic`/`Nightly`/`Manual`), first_seen_at, last_seen_at, seen_count, booked_at, status, review_reason, ignore_reason, intent_id, student_id, attempt_count, next_attempt_at, processing_id, processing_until_utc, last_error, version, **shadow_outcome, shadow_reason, shadow_intent_id, shadow_student_id, shadow_evaluated_at** (kết quả dự kiến ở `Shadow`: thêm cột ngay ở Đợt 2, điền từ Đợt 3) | **unique `(provider, provider_txn_id)`**; **unique `semantic_key`** (null được phép, khi `referenceCode` rỗng hoặc dòng `Held`); check `amount > 0`; partial index theo trạng thái chờ; index `(center_id, transacted_at_utc)` và `(center_id, amount)` để tra khi phụ huynh hỏi |
+| `bank_transactions` | id, config_id, center_id, **provider**, provider_txn_id (`id` API v2), **bank_code** (mã ngân hàng SePay trả, chuẩn hoá), **bank_bin** (lấy từ cấu hình khi số TK khớp; TK khác thì null), reference_code, account_number, provider_bank_account_id (`bank_account_id`), virtual_account (`va`), transfer_type, amount, content, transacted_at_utc, raw_payload (jsonb), semantic_key, duplicate_of_id, payload_checksum, fetched_by (`Doorbell`/`Periodic`/`Nightly`/`Manual`), first_seen_at, last_seen_at, seen_count, booked_at, status, review_reason, ignore_reason, intent_id, student_id, attempt_count, next_attempt_at, processing_id, processing_until_utc, last_error, version, **shadow_outcome, shadow_reason, shadow_intent_id, shadow_student_id, shadow_evaluated_at** (kết quả dự kiến ở `Shadow`: thêm cột ngay ở Đợt 2, điền từ Đợt 3) | **unique `(provider, provider_txn_id)`**; **unique `semantic_key`** (null được phép, khi `referenceCode` rỗng hoặc dòng `Held`); check `amount > 0`; partial index theo trạng thái chờ; index `(center_id, transacted_at_utc)` và `(center_id, amount)` để tra khi phụ huynh hỏi |
 | `receipts` (sửa) | thêm `bank_transaction_id`, `source` (`Manual`/`Auto`) | **partial unique `bank_transaction_id WHERE bank_transaction_id IS NOT NULL AND voided_at_utc IS NULL`**; **partial unique `bank_transaction_id WHERE source = 'Auto'`** (tính cả biên lai đã huỷ) |
 | `payment_audit_events` | center_id, actor, action, target, before, after, at | chỉ INSERT |
 
