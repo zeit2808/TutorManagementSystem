@@ -6,8 +6,8 @@ using TutorManagement.SharedKernel.Primitives;
 namespace TutorManagement.Modules.Finance.Application.Tuition;
 
 /// <summary>
-/// Center side of tuition (docs/HOC-PHI.md): class fees, charges, receipts, discounts and settings. Every call takes
-/// the center guard, brings billing up to date, then reads or changes.
+/// Center side of tuition (docs/HOC-PHI.md): class fees, charges, receipts, discounts and settings. Every change takes
+/// the center guard and brings billing up to date first; reads use <see cref="ReadSyncedAsync"/>.
 /// </summary>
 public sealed class TuitionWorkflow(ITuitionStore store, ITuitionAcademicsReader reader, IUserDirectory users, IClock clock)
 {
@@ -305,14 +305,37 @@ public sealed class TuitionWorkflow(ITuitionStore store, ITuitionAcademicsReader
 
     // ---------------- helpers ----------------
 
-    private async Task<(CenterLedger Ledger, DateOnly Today)> SyncedAsync(Guid centerId, CancellationToken token)
+    private Task<(CenterLedger Ledger, DateOnly Today)> SyncedAsync(Guid centerId, CancellationToken token) =>
+        ReadSyncedAsync(centerId, store, reader, clock, token);
+
+    /// <summary>
+    /// The ledger a screen shows, billed up to today. Billing changes something only when a cycle starts or a
+    /// payment/merge needs spreading, so a read first syncs a lock-free snapshot in memory; only if that would
+    /// change anything does it take the center guard and sync for real. Readers therefore no longer queue
+    /// behind each other on the guard, nor write on every page load.
+    /// </summary>
+    internal static async Task<(CenterLedger Ledger, DateOnly Today)> ReadSyncedAsync(Guid centerId, ITuitionStore store,
+        ITuitionAcademicsReader reader, IClock clock, CancellationToken token)
     {
-        await using var guard = await store.BeginCenterGuardAsync(centerId, token);
-        var ledger = await CenterLedger.LoadAsync(centerId, store, reader, token);
+        // Read-only entry point: nothing tracked before it belongs to this call's change check.
+        store.Detach();
         var now = clock.UtcNow;
         var today = FinanceTime.LocalDate(now);
+        await using (await store.BeginSnapshotAsync(token))
+        {
+            var snapshot = await CenterLedger.LoadAsync(centerId, store, reader, token);
+            snapshot.Sync(today, now);
+            if (snapshot.NewAnchors.Count == 0 && snapshot.NewCharges.Count == 0 && !store.HasChanges())
+                return (snapshot, today);
+        }
+
+        store.Detach();
+        await using var guard = await store.BeginCenterGuardAsync(centerId, token);
+        var ledger = await CenterLedger.LoadAsync(centerId, store, reader, token);
+        now = clock.UtcNow;
+        today = FinanceTime.LocalDate(now);
         ledger.Sync(today, now);
-        await PersistAsync(ledger, token);
+        await PersistAsync(ledger, store, token);
         await guard.CommitAsync(token);
         return (ledger, today);
     }

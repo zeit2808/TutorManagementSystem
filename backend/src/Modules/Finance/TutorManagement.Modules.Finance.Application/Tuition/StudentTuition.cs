@@ -15,13 +15,7 @@ public sealed class StudentTuitionQuery(ITuitionStore store, ITuitionAcademicsRe
         var empty = new Dictionary<Guid, string>();
         foreach (var link in links)
         {
-            await using var guard = await store.BeginCenterGuardAsync(link.CenterId, token);
-            var ledger = await CenterLedger.LoadAsync(link.CenterId, store, reader, token);
-            var now = clock.UtcNow;
-            var today = FinanceTime.LocalDate(now);
-            ledger.Sync(today, now);
-            await TuitionWorkflow.PersistAsync(ledger, store, token);
-            await guard.CommitAsync(token);
+            var (ledger, today) = await TuitionWorkflow.ReadSyncedAsync(link.CenterId, store, reader, clock, token);
             var student = ledger.FindStudent(link.StudentId);
             if (student is null) continue;
             var view = TuitionViews.Student(ledger, student, centerNames.GetValueOrDefault(link.CenterId) ?? string.Empty,
