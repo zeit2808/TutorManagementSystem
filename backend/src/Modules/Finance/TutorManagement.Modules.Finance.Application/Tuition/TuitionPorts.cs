@@ -62,6 +62,15 @@ public interface ITuitionStore
     /// <summary>One writer per center at a time (sync, payments, discounts) inside a transaction.</summary>
     Task<ITuitionGuard> BeginCenterGuardAsync(Guid centerId, CancellationToken token);
 
+    /// <summary>
+    /// A read-only, consistent view of the center for screens: no lock, so readers never queue behind each other
+    /// or behind a writer. Disposing it without committing is the normal way to end it.
+    /// </summary>
+    Task<ITuitionGuard> BeginSnapshotAsync(CancellationToken token);
+
+    /// <summary>True when a loaded entity was modified or an entity was added since the last save.</summary>
+    bool HasChanges();
+
     Task<IReadOnlyList<ClassFee>> ListFeesAsync(Guid centerId, CancellationToken token);
     Task<IReadOnlyList<ClassBillingAnchor>> ListAnchorsAsync(Guid centerId, CancellationToken token);
     /// <summary>Tracked: every charge of the center.</summary>

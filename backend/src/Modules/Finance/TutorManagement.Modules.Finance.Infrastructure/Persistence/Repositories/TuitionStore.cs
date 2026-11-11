@@ -30,6 +30,24 @@ public sealed class TuitionStore(FinanceDbContext db, IClock clock, IServiceProv
         }
     }
 
+    public async Task<ITuitionGuard> BeginSnapshotAsync(CancellationToken token)
+    {
+        // REPEATABLE READ: every query of the ledger sees the same snapshot, without blocking anyone.
+        var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, token);
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync("SET TRANSACTION READ ONLY", token);
+            return new Guard(transaction);
+        }
+        catch
+        {
+            await transaction.DisposeAsync();
+            throw;
+        }
+    }
+
+    public bool HasChanges() => db.ChangeTracker.HasChanges();
+
     public async Task<IReadOnlyList<ClassFee>> ListFeesAsync(Guid centerId, CancellationToken token) =>
         await db.ClassFees.AsNoTracking().Where(x => x.CenterId == centerId).ToArrayAsync(token);
 

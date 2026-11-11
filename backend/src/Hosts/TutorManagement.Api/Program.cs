@@ -13,6 +13,7 @@ using TutorManagement.Api.Development;
 using TutorManagement.Api.HealthChecks;
 using TutorManagement.Api.Middleware;
 using TutorManagement.Infrastructure;
+using TutorManagement.Infrastructure.Persistence;
 using TutorManagement.Modules.Academics.Api;
 using TutorManagement.Modules.Academics.Infrastructure;
 using TutorManagement.Modules.Finance.Api;
@@ -28,8 +29,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddSimpleConsole(options => options.SingleLine = true);
 
-var connectionString = builder.Configuration.GetConnectionString("MainDatabase")
-    ?? throw new InvalidOperationException("Connection string 'MainDatabase' is not configured.");
+var dbMinPoolSize = builder.Configuration.GetValue("DatabasePool:MinPoolSize", DatabaseConnectionPool.DefaultMinPoolSize);
+var dbIdleLifetimeSeconds = builder.Configuration.GetValue(
+    "DatabasePool:IdleLifetimeSeconds", DatabaseConnectionPool.DefaultIdleLifetimeSeconds);
+if (dbMinPoolSize is < 0 or > 50 || dbIdleLifetimeSeconds is < 60 or > 86400)
+    throw new InvalidOperationException("DatabasePool settings are outside the supported range.");
+var connectionString = DatabaseConnectionPool.Tune(
+    builder.Configuration.GetConnectionString("MainDatabase")
+        ?? throw new InvalidOperationException("Connection string 'MainDatabase' is not configured."),
+    dbMinPoolSize,
+    dbIdleLifetimeSeconds);
 
 var trustedProxies = builder.Configuration.GetSection("RateLimit:TrustedProxies").Get<string[]>() ?? [];
 var loginPermitLimit = builder.Configuration.GetValue("RateLimit:LoginPermitLimit", 30);
@@ -220,6 +229,10 @@ if (trustedProxies.Length > 0)
 if (!app.Environment.IsEnvironment("Testing"))
 {
     await app.Services.EnsureDatabaseIsCurrentAsync(app.Lifetime.ApplicationStopping);
+    var warmedConnections = await DatabaseConnectionPool.WarmUpAsync(
+        connectionString, dbMinPoolSize, app.Lifetime.ApplicationStopping);
+    StartupLog.PoolWarmed(app.Logger, warmedConnections, dbMinPoolSize);
+    await app.Services.WarmUpDatabaseAsync(app.Lifetime.ApplicationStopping);
     await app.Services.WarmUpIdentityAccessAsync(app.Lifetime.ApplicationStopping);
 }
 
@@ -283,3 +296,10 @@ static string CreateSwaggerSchemaId(Type type)
 }
 
 public partial class Program;
+
+internal static partial class StartupLog
+{
+    [LoggerMessage(EventId = 3100, Level = LogLevel.Information,
+        Message = "Database pool warmed: {Opened}/{Requested} connections open.")]
+    internal static partial void PoolWarmed(ILogger logger, int opened, int requested);
+}
